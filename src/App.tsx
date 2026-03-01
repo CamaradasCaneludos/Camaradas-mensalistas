@@ -2,7 +2,8 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+// TROQUE BrowserRouter por HashRouter aqui:
+import { HashRouter, Routes, Route } from "react-router-dom"; 
 import AppLayout from "./components/AppLayout";
 import Dashboard from "./pages/Dashboard";
 import Regras from "./pages/Regras";
@@ -19,7 +20,8 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <BrowserRouter>
+      {/* USE HashRouter no lugar de BrowserRouter */}
+      <HashRouter>
         <AppLayout>
           <Routes>
             <Route path="/" element={<Dashboard />} />
@@ -31,7 +33,7 @@ const App = () => (
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AppLayout>
-      </BrowserRouter>
+      </HashRouter>
     </TooltipProvider>
   </QueryClientProvider>
 );
