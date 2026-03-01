@@ -19,7 +19,7 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <HashRouter basename="/Camaradas-mensalistas">
+      <HashRouter>
         <AppLayout>
           <Routes>
             <Route path="/" element={<Dashboard />} />
