@@ -33,7 +33,7 @@ export const pagamento = {
 export const mensalistas: { nome: string; status: "em_dia" | "pendente" }[] = [
   { nome: "Diego Padilha(DiNego)", status: "pendente" },
   { nome: "Lucas Pessoa", status: "em_dia" },
-  { nome: "Antônio Carvalho", status: "pendente" },
+  { nome: "Antônio Carvalho", status: "em_dia" },
   { nome: "João Malbec", status: "pendente" },
   { nome: "Igor Cardoso", status: "pendente" },
   { nome: "Gabriel Junior (Cael)", status: "pendente" },
@@ -47,6 +47,8 @@ export const mensalistas: { nome: string; status: "em_dia" | "pendente" }[] = [
   { nome: "Marcelo Mascarin", status: "pendente" },
   { nome: "Pedro Carvalho", status: "pendente" },
   { nome: "Alisson Vieira", status: "pendente" },
+  { nome: "Gabriel", status: "pendente" },
+  { nome: "______", status: "pendente" },
 ];
 
 export const observacoes = [
