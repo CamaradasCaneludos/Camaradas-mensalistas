@@ -48,7 +48,7 @@ export const mensalistas: { nome: string; status: "em_dia" | "pendente" }[] = [
   { nome: "Pedro Carvalho", status: "pendente" },
   { nome: "Alisson Vieira", status: "pendente" },
   { nome: "Gabriel", status: "pendente" },
-  { nome: "______", status: "pendente" },
+  { nome: "Pedro (Gnose)", status: "pendente" },
 ];
 
 export const observacoes = [
