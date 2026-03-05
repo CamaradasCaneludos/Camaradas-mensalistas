@@ -31,7 +31,7 @@ export const pagamento = {
 };
 
 export const mensalistas: { nome: string; status: "em_dia" | "pendente" }[] = [
-  { nome: "Diego Padilha(DiNego)", status: "pendente" },
+  { nome: "Diego Padilha(DiNego)", status: "em_dia" },
   { nome: "Lucas Pessoa", status: "em_dia" },
   { nome: "Antônio Carvalho", status: "em_dia" },
   { nome: "João Malbec", status: "em_dia" },
