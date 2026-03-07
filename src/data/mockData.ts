@@ -37,7 +37,7 @@ export const mensalistas: { nome: string; status: "em_dia" | "pendente" }[] = [
   { nome: "João Malbec", status: "em_dia" },
   { nome: "Igor Cardoso", status: "em_dia" },
   { nome: "Gabriel Junior (Cael)", status: "pendente" },
-  { nome: "Matheus Leite", status: "pendente" },
+  { nome: "Matheus Leite", status: "em_dia" },
   { nome: "Mauthos Sepini", status: "em_dia" },
   { nome: "Leonardo Augusto", status: "em_dia" },
   { nome: "Márcio Júnior", status: "em_dia" },
