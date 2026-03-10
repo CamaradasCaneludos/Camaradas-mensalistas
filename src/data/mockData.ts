@@ -51,6 +51,14 @@ export const mensalistas: { nome: string; status: "em_dia" | "pendente" }[] = [
   { nome: "Pedro (Gnose)", status: "em_dia" },
 ];
 
+export const rankingVergonha: { nome: string; faltas: number; foto?: string }[] = [
+  { 
+    nome: "Alisson Vieira", 
+    faltas: 1, 
+    foto: "/jogadores/alisson.png" // O Next busca dentro da pasta public
+  },
+];
+
 export const observacoes = [
   "Todo dinheiro extra arrecadado será utilizado para compra de bola, colete, bombinha e luva de goleiro",
   "Controle de pagamento feito pelo Lucas Pessoa",
