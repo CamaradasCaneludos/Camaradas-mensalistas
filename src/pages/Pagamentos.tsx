@@ -1,5 +1,6 @@
 import { pagamento } from "@/data/mockData";
 import { CreditCard, Key, Building, User, DollarSign, Clock, AlertTriangle } from "lucide-react";
+import pixQrCode from "@/assets/pix-qrcode.JPG";
 
 const infoItems = [
   { icon: CreditCard, label: "Forma de pagamento", value: pagamento.forma },
@@ -37,7 +38,7 @@ export default function Pagamentos() {
         <h2 className="font-display text-xl tracking-wider text-primary">QR CODE PIX</h2>
         <p className="text-sm text-muted-foreground">Escaneie o código abaixo para pagar via PIX</p>
         <div className="rounded-lg bg-white p-3">
-          <img src="/pix-qrcode.JPG" alt="QR Code PIX" className="h-48 w-48" />
+          <img src={pixQrCode} alt="QR Code Pix" />
         </div>
         <p className="text-xs text-muted-foreground">Chave: {pagamento.chave}</p>
       </div>
