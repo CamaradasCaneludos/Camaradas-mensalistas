@@ -55,7 +55,7 @@ export const rankingVergonha: { nome: string; faltas: number; foto?: string }[] 
   { 
     nome: "Alisson Vieira", 
     faltas: 1, 
-    foto: "public/jogadores/alisson.png" // O Next busca dentro da pasta public
+    foto: "/alisson.png" // O Next busca dentro da pasta public
   },
 ];
 
