@@ -44,7 +44,6 @@ export default function Ranking() {
               </span>
 
               {/* Avatar */}
-              {/* Avatar */}
               <Avatar className="h-10 w-10 shrink-0">
                 {/* A propriedade 'foto' do seu mock vai aqui no src */}
                 <AvatarImage src={p.foto} alt={p.nome} className="object-cover" />

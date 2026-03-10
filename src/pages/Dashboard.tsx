@@ -57,7 +57,6 @@ export default function Dashboard() {
           </div>
           
           <Avatar className="h-20 w-20 ring-2 ring-primary/40 transition-all group-hover:ring-primary">
-            {/* ADICIONE ESTA LINHA ABAIXO */}
             <AvatarImage src={topFaltoso.foto} alt={topFaltoso.nome} className="object-cover" />
             
             <AvatarFallback className="bg-primary/20 font-display text-2xl text-primary">
