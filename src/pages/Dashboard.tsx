@@ -1,5 +1,5 @@
 import { infoJogo, rankingVergonha } from "@/data/mockData";
-import { MapPin, Clock, DollarSign, Users, Skull, Flame } from "lucide-react";
+import { MapPin, Clock, DollarSign, Users, Skull, Flame, Crown } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
@@ -53,7 +53,7 @@ export default function Dashboard() {
           className="group relative flex flex-col items-center gap-4 rounded-xl border border-primary/20 bg-card p-6 shadow-sm transition-all duration-300 hover:border-primary hover:shadow-lg hover:shadow-primary/10 cursor-pointer"
         >
           <div className="absolute right-4 top-4">
-            <Flame className="h-5 w-5 text-primary opacity-60 transition-opacity group-hover:opacity-100" />
+            <Crown className="h-5 w-5 text-primary opacity-60 transition-opacity group-hover:opacity-100" />
           </div>
           
           <Avatar className="h-20 w-20 ring-2 ring-primary/40 transition-all group-hover:ring-primary">
@@ -65,7 +65,6 @@ export default function Dashboard() {
           </Avatar>
           <div className="text-center">
             <div className="flex items-center justify-center gap-2">
-              <Skull className="h-5 w-5 text-primary" />
               <h2 className="font-display text-xl tracking-wide text-primary">
                 RANKING DA VERGONHA
               </h2>

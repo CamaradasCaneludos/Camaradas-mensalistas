@@ -1,5 +1,5 @@
 import { rankingVergonha } from "@/data/mockData";
-import { Trophy, Flame } from "lucide-react";
+import { Trophy, Flame, Crown } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 export default function Ranking() {
@@ -63,7 +63,7 @@ export default function Ranking() {
               <span className="flex-1 text-sm font-medium text-foreground">
                 {p.nome}
                 {isFirst && (
-                  <Flame className="ml-2 inline h-4 w-4 text-primary" />
+                  <Crown className="ml-2 inline h-4 w-4 text-primary" />
                 )}
               </span>
 
