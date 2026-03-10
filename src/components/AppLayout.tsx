@@ -7,6 +7,7 @@ import {
   CreditCard,
   Users,
   AlertCircle,
+  Skull,
   Menu,
   X,
 } from "lucide-react";
@@ -18,6 +19,7 @@ const navItems = [
   { to: "/pagamento", label: "Pagamento", icon: CreditCard },
   { to: "/mensalistas", label: "Mensalistas", icon: Users },
   { to: "/observacoes", label: "Observações", icon: AlertCircle },
+  { to: "/ranking", label: "Ranking da Vergonha", icon: Skull },
 ];
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {

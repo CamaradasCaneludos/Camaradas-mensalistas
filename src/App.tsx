@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { HashRouter, Routes, Route, BrowserRouter } from "react-router-dom"; 
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import AppLayout from "./components/AppLayout";
 import Dashboard from "./pages/Dashboard";
 import Regras from "./pages/Regras";
@@ -10,6 +10,7 @@ import Jogo from "./pages/Jogo";
 import Pagamentos from "./pages/Pagamentos";
 import Mensalistas from "./pages/Mensalistas";
 import Observacoes from "./pages/Observacoes";
+import Ranking from "./pages/Ranking";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -19,7 +20,7 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <HashRouter>
+      <BrowserRouter>
         <AppLayout>
           <Routes>
             <Route path="/" element={<Dashboard />} />
@@ -28,10 +29,11 @@ const App = () => (
             <Route path="/pagamento" element={<Pagamentos />} />
             <Route path="/mensalistas" element={<Mensalistas />} />
             <Route path="/observacoes" element={<Observacoes />} />
+            <Route path="/ranking" element={<Ranking />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AppLayout>
-      </HashRouter>
+      </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
 );
