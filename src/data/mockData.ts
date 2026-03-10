@@ -49,7 +49,7 @@ export const mensalistas: { nome: string; status: "em_dia" | "pendente" }[] = [
   { nome: "Marcelo Mascarin", status: "em_dia" },
   { nome: "Pedro Carvalho", status: "em_dia" },
   { nome: "Alisson Vieira", status: "em_dia" },
-  { nome: "Vinicius Lopes (Vinico)", status: "pendente" },
+  { nome: "Vinicius Lopes (Vinico)", status: "em_dia" },
   { nome: "Pedro (Gnose)", status: "em_dia" },
 ];
 
