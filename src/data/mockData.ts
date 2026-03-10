@@ -1,3 +1,5 @@
+import alissonImg from "@/assets/alisson.png"; // Usando o alias @ que está no seu config
+
 export const infoJogo = {
   local: "Campo do América",
   horario: "Domingo às 08h",
@@ -55,7 +57,7 @@ export const rankingVergonha: { nome: string; faltas: number; foto?: string }[] 
   { 
     nome: "Alisson Vieira", 
     faltas: 1, 
-    foto: "/alisson.png" // O Next busca dentro da pasta public
+    foto: "/Camaradas-mensalistas/alisson.png"
   },
 ];
 
