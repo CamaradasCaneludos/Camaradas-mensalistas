@@ -66,7 +66,7 @@ export default function Dashboard() {
           <div className="text-center">
             <div className="flex items-center justify-center gap-2">
               <h2 className="font-display text-xl tracking-wide text-primary">
-                RANKING DA VERGONHA
+                MURAL DA VERGONHA
               </h2>
             </div>
             <p className="mt-1 text-sm text-muted-foreground">

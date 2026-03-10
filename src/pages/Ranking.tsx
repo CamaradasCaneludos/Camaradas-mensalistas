@@ -9,7 +9,7 @@ export default function Ranking() {
     <div className="space-y-6">
       <div>
         <h1 className="font-display text-4xl tracking-wider text-primary">
-          RANKING DA VERGONHA
+          MURAL DA VERGONHA
         </h1>
       </div>
 
@@ -83,7 +83,7 @@ export default function Ranking() {
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <Trophy className="h-4 w-4 text-primary" />
           <span>
-            Ranking atualizado manualmente. Não falte pra não subir no ranking!
+            Mural atualizado manualmente. Não falte pra não subir no ranking!
           </span>
         </div>
       </div>
