@@ -65,7 +65,7 @@ export const rankingVergonha: { nome: string; faltas: number; foto?: string }[] 
     foto: "/Camaradas-mensalistas/Marcelo.png"
   },
   { 
-    nome: "Gabriel Junior (Cael", 
+    nome: "Gabriel Junior (Cael)", 
     faltas: 1, 
     foto: "/Camaradas-mensalistas/Cael.png"
   },
