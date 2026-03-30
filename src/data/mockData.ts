@@ -33,24 +33,24 @@ export const pagamento = {
 };
 
 export const mensalistas: { nome: string; status: "em_dia" | "pendente" }[] = [
-  { nome: "Diego Padilha(DiNego)", status: "em_dia" },
+  { nome: "Diego Padilha(DiNego)", status: "pendente" },
   { nome: "Lucas Pessoa", status: "em_dia" },
   { nome: "Antônio Carvalho", status: "em_dia" },
   { nome: "João Malbec", status: "em_dia" },
-  { nome: "Igor Cardoso", status: "em_dia" },
-  { nome: "Gabriel Junior (Cael)", status: "em_dia" },
-  { nome: "Matheus Leite", status: "em_dia" },
-  { nome: "Mauthos Sepini", status: "em_dia" },
-  { nome: "Leonardo Augusto", status: "em_dia" },
-  { nome: "Márcio Júnior", status: "em_dia" },
-  { nome: "Erick Pessoa", status: "em_dia" },
-  { nome: "Lucas Souza", status: "em_dia" },
-  { nome: "Lucas Alberto", status: "em_dia" },
-  { nome: "Marcelo Mascarin", status: "em_dia" },
-  { nome: "Pedro Carvalho", status: "em_dia" },
-  { nome: "Alisson Vieira", status: "em_dia" },
-  { nome: "Vinicius Lopes (Vinico)", status: "em_dia" },
-  { nome: "Pedro (Gnose)", status: "em_dia" },
+  { nome: "Igor Cardoso", status: "pendente" },
+  { nome: "Gabriel Junior (Cael)", status: "pendente" },
+  { nome: "Matheus Leite", status: "pendente" },
+  { nome: "Mauthos Sepini", status: "pendente" },
+  { nome: "Leonardo Augusto", status: "pendente" },
+  { nome: "Márcio Júnior", status: "pendente" },
+  { nome: "Erick Pessoa", status: "pendente" },
+  { nome: "Lucas Souza", status: "pendente" },
+  { nome: "Lucas Alberto", status: "pendente" },
+  { nome: "Marcelo Mascarin", status: "pendente" },
+  { nome: "Pedro Carvalho", status: "pendente" },
+  { nome: "Alisson Vieira", status: "pendente" },
+  { nome: "Vinicius Lopes (Vinico)", status: "pendente" },
+  { nome: "Pedro (Gnose)", status: "pendente" },
 ];
 
 export const rankingVergonha: { nome: string; faltas: number; foto?: string }[] = [
@@ -58,6 +58,16 @@ export const rankingVergonha: { nome: string; faltas: number; foto?: string }[] 
     nome: "Alisson Vieira", 
     faltas: 1, 
     foto: "/Camaradas-mensalistas/alisson.png"
+  },
+  { 
+    nome: "Marcelo Mascarin", 
+    faltas: 1, 
+    foto: "/Camaradas-mensalistas/Marcelo.png"
+  },
+  { 
+    nome: "Gabriel Junior (Cael", 
+    faltas: 1, 
+    foto: "/Camaradas-mensalistas/Cael.png"
   },
 ];
 
