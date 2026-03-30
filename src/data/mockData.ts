@@ -56,7 +56,7 @@ export const mensalistas: { nome: string; status: "em_dia" | "pendente" }[] = [
 export const rankingVergonha: { nome: string; faltas: number; foto?: string }[] = [
   { 
     nome: "Alisson Vieira", 
-    faltas: 1, 
+    faltas: 1.5, 
     foto: "/Camaradas-mensalistas/alisson.png"
   },
   { 
