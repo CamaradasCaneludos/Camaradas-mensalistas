@@ -8,6 +8,7 @@ import {
   Users,
   AlertCircle,
   Skull,
+  Eye,
   Menu,
   X,
 } from "lucide-react";
@@ -19,6 +20,7 @@ const navItems = [
   { to: "/ranking", label: "Mural da Vergonha", icon: Skull },
   { to: "/mensalistas", label: "Mensalistas", icon: Users },
   { to: "/pagamento", label: "Pagamento", icon: CreditCard },
+  { to: "/transparencia", label: "Transparência", icon: Eye },
   { to: "/observacoes", label: "Observações", icon: AlertCircle },
 ];
 

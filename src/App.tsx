@@ -12,6 +12,7 @@ import Mensalistas from "./pages/Mensalistas";
 import Observacoes from "./pages/Observacoes";
 import NotFound from "./pages/NotFound";
 import Ranking from "./pages/Ranking";
+import Transparencia from "./pages/Transparencia";
 
 const queryClient = new QueryClient();
 
@@ -29,6 +30,7 @@ const App = () => (
             <Route path="/ranking" element={<Ranking />} />
             <Route path="/pagamento" element={<Pagamentos />} />
             <Route path="/mensalistas" element={<Mensalistas />} />
+            <Route path="/transparencia" element={<Transparencia />} />
             <Route path="/observacoes" element={<Observacoes />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
