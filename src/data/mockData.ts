@@ -82,7 +82,7 @@ export const observacoes = [
 export const caixaAtual = 139.0;
 
 export const comprovantes = [
-  { mes: "Março 2026", imagem: "/comprovantes/marco.jpeg" },
+  { mes: "Março 2026", imagem: "/marco.jpeg" },
 ];
 
 export const movimentacoes: { data: string; valor: number; descricao: string; tipo: "entrada" | "saida" }[] = [
