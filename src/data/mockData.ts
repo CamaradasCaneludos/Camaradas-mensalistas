@@ -86,5 +86,5 @@ export const comprovantes = [
 ];
 
 export const movimentacoes: { data: string; valor: number; descricao: string; tipo: "entrada" | "saida" }[] = [
-  { data: "Junho 2026", valor: 139, descricao: "Avulsos do futebol", tipo: "entrada" },
+  { data: "Março 2026", valor: 139, descricao: "Avulsos do futebol", tipo: "entrada" },
 ];

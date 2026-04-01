@@ -1,4 +1,9 @@
 import { useState } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Receipt, Wallet, History, BarChart3, TrendingUp, TrendingDown, CalendarDays, ChevronDown, ChevronUp } from "lucide-react";
 import {
   ChartContainer,
@@ -28,23 +33,41 @@ const chartConfig = {
 /* ── Componente de Comprovante ── */
 
 function ComprovanteCard({ mes, imagem }: { mes: string; imagem: string }) {
+  const [open, setOpen] = useState(false);
+
   return (
-    <div className="overflow-hidden rounded-lg border border-border">
-      <img
-        src={imagem}
-        alt={`Comprovante ${mes}`}
-        className="h-auto w-full object-contain"
-        onError={(e) => {
-          const target = e.currentTarget;
-          target.style.display = "none";
-          target.nextElementSibling?.classList.remove("hidden");
-        }}
-      />
-      <div className="hidden flex-col items-center justify-center gap-2 bg-muted/30 py-12 text-muted-foreground">
-        <Receipt className="h-8 w-8" />
-        <span className="text-sm">Imagem não disponível</span>
+    <>
+      <div
+        className="h-48 cursor-pointer overflow-hidden rounded-lg border border-border transition-all hover:border-primary/50 hover:shadow-md"
+        onClick={() => setOpen(true)}
+      >
+        <img
+          src={imagem}
+          alt={`Comprovante ${mes}`}
+          className="h-full w-full object-cover"
+          onError={(e) => {
+            const target = e.currentTarget;
+            target.style.display = "none";
+            target.nextElementSibling?.classList.remove("hidden");
+          }}
+        />
+        <div className="hidden h-full flex-col items-center justify-center gap-2 bg-muted/30 text-muted-foreground">
+          <Receipt className="h-8 w-8" />
+          <span className="text-sm">Imagem não disponível</span>
+        </div>
       </div>
-    </div>
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-w-3xl border-primary/20 bg-card p-2">
+          <DialogTitle className="sr-only">Comprovante {mes}</DialogTitle>
+          <img
+            src={imagem}
+            alt={`Comprovante ${mes}`}
+            className="h-auto w-full rounded-lg object-contain"
+          />
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 
