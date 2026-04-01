@@ -58,12 +58,12 @@ function ComprovanteCard({ mes, imagem }: { mes: string; imagem: string }) {
       </div>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-3xl border-primary/20 bg-card p-2">
+        <DialogContent className="max-w-md border-primary/20 bg-card p-3">
           <DialogTitle className="sr-only">Comprovante {mes}</DialogTitle>
           <img
             src={imagem}
             alt={`Comprovante ${mes}`}
-            className="h-auto w-full rounded-lg object-contain"
+            className="max-h-[60vh] w-auto mx-auto rounded-lg object-contain"
           />
         </DialogContent>
       </Dialog>
