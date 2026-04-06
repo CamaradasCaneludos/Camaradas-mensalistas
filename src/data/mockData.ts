@@ -55,13 +55,18 @@ export const mensalistas: { nome: string; status: "em_dia" | "pendente" }[] = [
 export const rankingVergonha: { nome: string; faltas: number; foto?: string }[] = [
   { 
     nome: "Alisson Vieira", 
-    faltas: 1.5, 
+    faltas: 2.5, 
     foto: "/Camaradas-mensalistas/alisson.png"
   },
   { 
     nome: "Marcelo Mascarin", 
     faltas: 1, 
     foto: "/Camaradas-mensalistas/Marcelo.png"
+  },
+  { 
+    nome: "Diego Padilha (Dinego)", 
+    faltas: 1, 
+    foto: "/Camaradas-mensalistas/Dinego.png"
   },
   { 
     nome: "Gabriel Junior (Cael)", 
