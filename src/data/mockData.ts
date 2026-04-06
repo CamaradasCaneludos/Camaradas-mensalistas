@@ -48,8 +48,8 @@ export const mensalistas: { nome: string; status: "em_dia" | "pendente" }[] = [
   { nome: "Lucas Alberto", status: "em_dia" },
   { nome: "Marcelo Mascarin", status: "em_dia" },
   { nome: "Alisson Vieira", status: "em_dia" },
-  { nome: "Vinicius Lopes (Vinico)", status: "pendente" },
-  { nome: "Pedro (Gnose)", status: "pendente" },
+  { nome: "Vinicius Lopes (Vinico)", status: "em_dia" },
+  { nome: "Pedro (Gnose)", status: "em_dia" },
 ];
 
 export const rankingVergonha: { nome: string; faltas: number; foto?: string }[] = [
