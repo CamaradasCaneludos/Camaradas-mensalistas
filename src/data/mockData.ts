@@ -88,6 +88,7 @@ export const caixaAtual = 349.58;
 
 export const comprovantes = [
   { mes: "Março 2026", imagem: "/Camaradas-mensalistas/Comprovantes/marco.png" },
+  { mes: "Abril 2026", imagem: "/Camaradas-mensalistas/Comprovantes/abril.png" },
 ];
 
 export const movimentacoes: { data: string; valor: number; descricao: string; tipo: "entrada" | "saida" }[] = [
