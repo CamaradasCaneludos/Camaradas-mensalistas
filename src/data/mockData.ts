@@ -84,12 +84,14 @@ export const observacoes = [
 
 /* ── Portal da Transparência ── */
 
-export const caixaAtual = 139.0;
+export const caixaAtual = 349.58;
 
 export const comprovantes = [
   { mes: "Março 2026", imagem: "/Camaradas-mensalistas/Comprovantes/marco.png" },
 ];
 
 export const movimentacoes: { data: string; valor: number; descricao: string; tipo: "entrada" | "saida" }[] = [
-  { data: "Março 2026", valor: 139, descricao: "Avulsos do futebol", tipo: "entrada" },
+  { data: "Março 2026", valor: 149, descricao: "Avulsos do futebol", tipo: "entrada" },
+  {data: "Abril 2026", valor: 190, descricao: "Avulsos do futebol", tipo: "entrada" },
+  {data: "16 de Abril 2026", valor: 18.55, descricao: "Cronometro", tipo: "saida" }
 ];
