@@ -49,7 +49,7 @@ export const mensalistas: { nome: string; status: "em_dia" | "pendente" }[] = [
   { nome: "Marcelo Mascarin", status: "pendente" },
   { nome: "Alisson Vieira", status: "pendente" },
   { nome: "Vinicius Lopes (Vinico)", status: "pendente" },
-  { nome: "Pedro (Gnose)", status: "pendente" },
+  { nome: "Pedro (Gnose)", status: "em_dia" },
 ];
 
 export const rankingVergonha: { nome: string; faltas: number; foto?: string }[] = [
@@ -84,7 +84,7 @@ export const observacoes = [
 
 /* ── Portal da Transparência ── */
 
-export const caixaAtual = 349.58;
+export const caixaAtual = 149.59;
 
 export const comprovantes = [
   { mes: "Março 2026", imagem: "/Camaradas-mensalistas/Comprovantes/marco.png" },
@@ -94,5 +94,7 @@ export const comprovantes = [
 export const movimentacoes: { data: string; valor: number; descricao: string; tipo: "entrada" | "saida" }[] = [
   { data: "Março 2026", valor: 149, descricao: "Avulsos do futebol", tipo: "entrada" },
   {data: "Abril 2026", valor: 190, descricao: "Avulsos do futebol", tipo: "entrada" },
-  {data: "16 de Abril 2026", valor: 18.55, descricao: "Cronometro", tipo: "saida" }
+  {data: "16 de Abril 2026", valor: 18.55, descricao: "Cronometro", tipo: "saida" },
+  {data: "07 de Maio 2026", valor: 150, descricao: "Campeonato", tipo: "saida" }
+
 ];
