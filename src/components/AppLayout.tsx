@@ -9,6 +9,7 @@ import {
   AlertCircle,
   Skull,
   Eye,
+  Shuffle,
   Menu,
   X,
 } from "lucide-react";
@@ -17,6 +18,7 @@ const navItems = [
   { to: "/", label: "Início", icon: LayoutDashboard },
   { to: "/regras", label: "Regras", icon: ScrollText },
   { to: "/jogo", label: "Futebol", icon: MapPin },
+  { to: "/sorteador", label: "Sorteador de Times", icon: Shuffle },
   { to: "/ranking", label: "Mural da Vergonha", icon: Skull },
   { to: "/mensalistas", label: "Mensalistas", icon: Users },
   { to: "/pagamento", label: "Pagamento", icon: CreditCard },
