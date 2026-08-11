@@ -7,7 +7,8 @@ export interface Jogador {
 
 export interface Time {
   jogadores: Jogador[];
-  total: number;
+  /** produto das notas dos jogadores do time (1 quando vazio) */
+  produto: number;
 }
 
 const STORAGE_KEY = "camaradas:jogadores";
@@ -46,13 +47,16 @@ function embaralhar<T>(arr: T[]): T[] {
 }
 
 /**
- * Distribui jogadores de linha em `numTimes` times equilibrados pela soma das notas.
+ * Distribui jogadores de linha em `numTimes` times equilibrados pelo produto das notas.
  * `timesBase` permite fixar jogadores já alocados (ex: goleiros) — os jogadores de
  * linha são acrescentados sobre essa base.
  *
  * Estratégia: ordena por nota (desc) com embaralhamento prévio (para variar a cada
- * sorteio) e vai colocando cada jogador no time com menos gente e menor soma,
+ * sorteio) e vai colocando cada jogador no time com menos gente e menor produto,
  * com desempate aleatório — mantém times balanceados em tamanho e em nível.
+ *
+ * A comparação é feita sobre a soma dos logaritmos das notas (equivalente a comparar
+ * os produtos, mas sem estourar a precisão quando há muitos jogadores).
  */
 export function sortearTimes(
   jogadoresLinha: Jogador[],
@@ -61,30 +65,39 @@ export function sortearTimes(
 ): Time[] {
   const times: Time[] =
     timesBase && timesBase.length === numTimes
-      ? timesBase.map((t) => ({ jogadores: [...t.jogadores], total: t.total }))
-      : Array.from({ length: numTimes }, () => ({ jogadores: [], total: 0 }));
+      ? timesBase.map((t) => ({ jogadores: [...t.jogadores], produto: t.produto }))
+      : Array.from({ length: numTimes }, () => ({ jogadores: [], produto: 1 }));
+
+  // log do produto acumulado de cada time, usado só para comparar
+  const logs = times.map((t) =>
+    t.jogadores.reduce((acc, j) => acc + Math.log(j.nota), 0),
+  );
 
   const ordenados = embaralhar(jogadoresLinha).sort((a, b) => b.nota - a.nota);
 
   for (const jogador of ordenados) {
     // 1) prioriza os times com menos jogadores (mantém tamanhos parelhos)
     const menorQtd = Math.min(...times.map((t) => t.jogadores.length));
-    const candidatos = times.filter((t) => t.jogadores.length === menorQtd);
+    const indices = times
+      .map((_, i) => i)
+      .filter((i) => times[i].jogadores.length === menorQtd);
 
-    // 2) entre esses, escolhe os de menor soma de notas
-    const menorTotal = Math.min(...candidatos.map((t) => t.total));
-    const empatados = candidatos.filter((t) => t.total === menorTotal);
+    // 2) entre esses, escolhe os de menor produto de notas
+    const menorLog = Math.min(...indices.map((i) => logs[i]));
+    const empatados = indices.filter((i) => logs[i] === menorLog);
 
     // 3) desempate aleatório
     const escolhido = empatados[Math.floor(Math.random() * empatados.length)];
-    escolhido.jogadores.push(jogador);
-    escolhido.total += jogador.nota;
+    times[escolhido].jogadores.push(jogador);
+    times[escolhido].produto *= jogador.nota;
+    logs[escolhido] += Math.log(jogador.nota);
   }
 
   return times;
 }
 
+/** Média geométrica das notas do time — a "nota média" coerente com o produto. */
 export function mediaTime(time: Time): number {
   if (time.jogadores.length === 0) return 0;
-  return time.total / time.jogadores.length;
+  return Math.pow(time.produto, 1 / time.jogadores.length);
 }

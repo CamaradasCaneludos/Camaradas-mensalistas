@@ -33,6 +33,12 @@ import {
 } from "@/components/ui/tabs";
 import { toast } from "sonner";
 
+/** O produto cresce rápido — acima de 1 milhão mostra em notação científica. */
+function formatarProduto(valor: number): string {
+  if (valor >= 1e6) return valor.toExponential(2).replace("e+", " × 10^");
+  return valor.toLocaleString("pt-BR", { maximumFractionDigits: 1 });
+}
+
 export default function Sorteador() {
   const [jogadores, setJogadores] = useState<Jogador[]>([]);
 
@@ -171,13 +177,13 @@ export default function Sorteador() {
     // Base com goleiros fixos: cada goleiro fica preso ao time escolhido.
     const timesBase: Time[] = Array.from({ length: numTimes }, () => ({
       jogadores: [],
-      total: 0,
+      produto: 1,
     }));
     for (const g of goleirosPresentes) {
       const idx = goleiroPorTime[g.id];
       if (idx !== undefined && idx >= 0 && idx < numTimes) {
         timesBase[idx].jogadores.push(g);
-        timesBase[idx].total += g.nota;
+        timesBase[idx].produto *= g.nota;
       }
     }
 
@@ -197,7 +203,8 @@ export default function Sorteador() {
           SORTEADOR DE TIMES
         </h1>
         <p className="mt-1 text-muted-foreground">
-          Cadastre os jogadores com suas notas e gere times equilibrados.
+          Cadastre os jogadores com suas notas e gere times equilibrados pelo
+          produto das notas.
         </p>
       </div>
 
@@ -368,10 +375,10 @@ export default function Sorteador() {
                           <p>
                             Média{" "}
                             <span className="font-semibold text-foreground">
-                              {mediaTime(time).toFixed(1)}
+                              {mediaTime(time).toFixed(2)}
                             </span>
                           </p>
-                          <p>Total {time.total.toFixed(1)}</p>
+                          <p>Produto {formatarProduto(time.produto)}</p>
                         </div>
                       </div>
                       <ul className="divide-y divide-border">
