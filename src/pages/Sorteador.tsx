@@ -7,6 +7,9 @@ import {
   novoId,
   sortearTimes,
   mediaTime,
+  maxTimes,
+  capacidadesTimes,
+  TAMANHO_TIME,
 } from "@/data/sorteador";
 import { mensalistas } from "@/data/mockData";
 import {
@@ -39,6 +42,15 @@ function formatarProduto(valor: number): string {
   return valor.toLocaleString("pt-BR", { maximumFractionDigits: 1 });
 }
 
+/** Quantos jogadores de linha o time já tem (goleiro não ocupa vaga). */
+function jogadoresDeLinha(time: Time): number {
+  return time.jogadores.filter((j) => !j.goleiro).length;
+}
+
+function vagasLivres(time: Time): number {
+  return TAMANHO_TIME - jogadoresDeLinha(time);
+}
+
 export default function Sorteador() {
   const [jogadores, setJogadores] = useState<Jogador[]>([]);
 
@@ -53,6 +65,7 @@ export default function Sorteador() {
   const [numTimes, setNumTimes] = useState(2);
   const [goleiroPorTime, setGoleiroPorTime] = useState<Record<string, number>>({});
   const [resultado, setResultado] = useState<Time[] | null>(null);
+  const [reservas, setReservas] = useState<Jogador[]>([]);
 
   /* ── carregar do localStorage ── */
   useEffect(() => {
@@ -154,6 +167,15 @@ export default function Sorteador() {
     () => jogadoresPresentes.filter((j) => j.goleiro),
     [jogadoresPresentes],
   );
+  const linhaPresentes = useMemo(
+    () => jogadoresPresentes.filter((j) => !j.goleiro),
+    [jogadoresPresentes],
+  );
+  const timesPossiveis = maxTimes(linhaPresentes.length);
+  const capacidades = useMemo(
+    () => capacidadesTimes(linhaPresentes.length, numTimes),
+    [linhaPresentes.length, numTimes],
+  );
 
   function togglePresenca(id: string) {
     setPresentes((p) => ({ ...p, [id]: !p[id] }));
@@ -168,9 +190,11 @@ export default function Sorteador() {
       toast.error("Escolha pelo menos 2 times.");
       return;
     }
-    const linha = jogadoresPresentes.filter((j) => !j.goleiro);
-    if (linha.length < numTimes) {
-      toast.error("Poucos jogadores de linha para o número de times.");
+    const linha = linhaPresentes;
+    if (numTimes > timesPossiveis) {
+      toast.error(
+        `Com ${linha.length} jogador(es) de linha dá para montar no máximo ${timesPossiveis} time(s) de ${TAMANHO_TIME}.`,
+      );
       return;
     }
 
@@ -187,8 +211,14 @@ export default function Sorteador() {
       }
     }
 
-    setResultado(sortearTimes(linha, numTimes, timesBase));
-    toast.success("Times sorteados!");
+    const sorteio = sortearTimes(linha, numTimes, timesBase);
+    setResultado(sorteio.times);
+    setReservas(sorteio.reservas);
+    toast.success(
+      sorteio.reservas.length > 0
+        ? `Times sorteados! ${sorteio.reservas.length} jogador(es) ficaram de fora.`
+        : "Times sorteados!",
+    );
   }
 
   const notasSugeridas = [
@@ -240,7 +270,7 @@ export default function Sorteador() {
                       id="numTimes"
                       type="number"
                       min={2}
-                      max={jogadoresPresentes.length}
+                      max={Math.max(timesPossiveis, 2)}
                       value={numTimes}
                       onChange={(e) => setNumTimes(parseInt(e.target.value) || 2)}
                       className="mt-1 w-28"
@@ -252,8 +282,21 @@ export default function Sorteador() {
                         {jogadoresPresentes.length}
                       </strong>{" "}
                       presente(s) — {goleirosPresentes.length} goleiro(s) e{" "}
-                      {jogadoresPresentes.length - goleirosPresentes.length} de
-                      linha
+                      {linhaPresentes.length} de linha
+                    </p>
+                    <p className="mt-0.5">
+                      Times de {TAMANHO_TIME} na linha (goleiro à parte) →{" "}
+                      <strong className="text-foreground">
+                        {capacidades.join(" + ")}
+                      </strong>
+                      {linhaPresentes.length > numTimes * TAMANHO_TIME && (
+                        <>
+                          {" "}
+                          e{" "}
+                          {linhaPresentes.length - numTimes * TAMANHO_TIME} de
+                          fora
+                        </>
+                      )}
                     </p>
                   </div>
                   <Button onClick={sortear} className="gap-2">
@@ -368,9 +411,20 @@ export default function Sorteador() {
                       className="rounded-xl border border-primary/20 bg-card shadow-sm"
                     >
                       <div className="flex items-center justify-between border-b border-border px-4 py-3">
-                        <h3 className="font-display text-xl tracking-wide text-primary">
-                          TIME {i + 1}
-                        </h3>
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-display text-xl tracking-wide text-primary">
+                            TIME {i + 1}
+                          </h3>
+                          <Badge
+                            variant={
+                              vagasLivres(time) > 0 ? "outline" : "secondary"
+                            }
+                          >
+                            {vagasLivres(time) > 0
+                              ? `${jogadoresDeLinha(time)}/${TAMANHO_TIME} — falta ${vagasLivres(time)}`
+                              : `${TAMANHO_TIME}/${TAMANHO_TIME}`}
+                          </Badge>
+                        </div>
                         <div className="text-right text-xs text-muted-foreground">
                           <p>
                             Média{" "}
@@ -401,6 +455,23 @@ export default function Sorteador() {
                       </ul>
                     </div>
                   ))}
+                </div>
+              )}
+
+              {/* Fora dos times */}
+              {resultado && reservas.length > 0 && (
+                <div className="rounded-xl border border-primary/20 bg-card p-5 shadow-sm">
+                  <p className="mb-3 text-sm font-medium text-foreground">
+                    Fora dos times ({reservas.length})
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {reservas.map((j) => (
+                      <Badge key={j.id} variant="outline" className="gap-1.5">
+                        {j.nome}
+                        <span className="text-muted-foreground">{j.nota}</span>
+                      </Badge>
+                    ))}
+                  </div>
                 </div>
               )}
             </>

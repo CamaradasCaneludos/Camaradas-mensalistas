@@ -37,6 +37,15 @@ export function novoId(): string {
 
 /* ── Sorteio ── */
 
+/** Jogadores de linha por time (o goleiro é à parte). */
+export const TAMANHO_TIME = 5;
+
+export interface ResultadoSorteio {
+  times: Time[];
+  /** jogadores de linha que sobraram quando há gente demais para os times pedidos */
+  reservas: Jogador[];
+}
+
 function embaralhar<T>(arr: T[]): T[] {
   const copia = [...arr];
   for (let i = copia.length - 1; i > 0; i--) {
@@ -46,14 +55,35 @@ function embaralhar<T>(arr: T[]): T[] {
   return copia;
 }
 
+/** Quantos times dá para montar com `totalLinha` jogadores (o último pode ficar incompleto). */
+export function maxTimes(totalLinha: number): number {
+  return Math.ceil(totalLinha / TAMANHO_TIME);
+}
+
 /**
- * Distribui jogadores de linha em `numTimes` times equilibrados pelo produto das notas.
- * `timesBase` permite fixar jogadores já alocados (ex: goleiros) — os jogadores de
- * linha são acrescentados sobre essa base.
+ * Vagas de linha de cada time: enche de 5 em 5 e o que sobrar vai para o último time.
+ * Ex.: 13 jogadores em 3 times → [5, 5, 3].
+ */
+export function capacidadesTimes(totalLinha: number, numTimes: number): number[] {
+  let restantes = Math.min(totalLinha, numTimes * TAMANHO_TIME);
+  return Array.from({ length: numTimes }, () => {
+    const vagas = Math.min(TAMANHO_TIME, restantes);
+    restantes -= vagas;
+    return vagas;
+  });
+}
+
+/**
+ * Distribui jogadores de linha em `numTimes` times de até 5, equilibrados pelo produto
+ * das notas. `timesBase` permite fixar jogadores já alocados (ex: goleiros) — os
+ * jogadores de linha são acrescentados sobre essa base e os goleiros não ocupam vaga.
+ *
+ * Os times fecham em 5: com número quebrado, só o último fica incompleto (13 em 3 times
+ * → 5, 5, 3). Se sobrar gente para as vagas disponíveis, o excedente vira reserva.
  *
  * Estratégia: ordena por nota (desc) com embaralhamento prévio (para variar a cada
- * sorteio) e vai colocando cada jogador no time com menos gente e menor produto,
- * com desempate aleatório — mantém times balanceados em tamanho e em nível.
+ * sorteio) e vai colocando cada jogador no time menos preenchido (proporcional às vagas)
+ * e de menor média, com desempate aleatório.
  *
  * A comparação é feita sobre a soma dos logaritmos das notas (equivalente a comparar
  * os produtos, mas sem estourar a precisão quando há muitos jogadores).
@@ -62,7 +92,7 @@ export function sortearTimes(
   jogadoresLinha: Jogador[],
   numTimes: number,
   timesBase?: Time[],
-): Time[] {
+): ResultadoSorteio {
   const times: Time[] =
     timesBase && timesBase.length === numTimes
       ? timesBase.map((t) => ({ jogadores: [...t.jogadores], produto: t.produto }))
@@ -73,27 +103,41 @@ export function sortearTimes(
     t.jogadores.reduce((acc, j) => acc + Math.log(j.nota), 0),
   );
 
-  const ordenados = embaralhar(jogadoresLinha).sort((a, b) => b.nota - a.nota);
+  const capacidades = capacidadesTimes(jogadoresLinha.length, numTimes);
+  const ocupacao = times.map(() => 0); // só jogadores de linha ocupam vaga
 
-  for (const jogador of ordenados) {
-    // 1) prioriza os times com menos jogadores (mantém tamanhos parelhos)
-    const menorQtd = Math.min(...times.map((t) => t.jogadores.length));
-    const indices = times
+  const sorteados = embaralhar(jogadoresLinha);
+  const totalVagas = capacidades.reduce((acc, c) => acc + c, 0);
+  const reservas = sorteados.slice(totalVagas);
+  const emCampo = sorteados.slice(0, totalVagas).sort((a, b) => b.nota - a.nota);
+
+  for (const jogador of emCampo) {
+    // 1) só times com vaga sobrando
+    const disponiveis = times
       .map((_, i) => i)
-      .filter((i) => times[i].jogadores.length === menorQtd);
+      .filter((i) => ocupacao[i] < capacidades[i]);
 
-    // 2) entre esses, escolhe os de menor produto de notas
-    const menorLog = Math.min(...indices.map((i) => logs[i]));
-    const empatados = indices.filter((i) => logs[i] === menorLog);
+    // 2) prioriza os menos preenchidos em relação às próprias vagas
+    const preenchimento = (i: number) => ocupacao[i] / capacidades[i];
+    const menorPreenchimento = Math.min(...disponiveis.map(preenchimento));
+    const indices = disponiveis.filter(
+      (i) => preenchimento(i) === menorPreenchimento,
+    );
 
-    // 3) desempate aleatório
+    // 3) entre esses, escolhe os de menor média de notas (média geométrica, via log)
+    const media = (i: number) => logs[i] / Math.max(times[i].jogadores.length, 1);
+    const menorMedia = Math.min(...indices.map(media));
+    const empatados = indices.filter((i) => media(i) === menorMedia);
+
+    // 4) desempate aleatório
     const escolhido = empatados[Math.floor(Math.random() * empatados.length)];
     times[escolhido].jogadores.push(jogador);
     times[escolhido].produto *= jogador.nota;
     logs[escolhido] += Math.log(jogador.nota);
+    ocupacao[escolhido] += 1;
   }
 
-  return times;
+  return { times, reservas };
 }
 
 /** Média geométrica das notas do time — a "nota média" coerente com o produto. */
