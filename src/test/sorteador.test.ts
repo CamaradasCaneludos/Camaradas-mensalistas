@@ -74,10 +74,12 @@ describe("sortearTimes", () => {
 });
 
 describe("notaGeral", () => {
-  it("é a média arredondada dos seis atributos", () => {
-    expect(
-      notaGeral({ ritmo: 90, finalizacao: 93, passe: 82, drible: 89, defesa: 35, fisico: 78 }),
-    ).toBe(78);
-    expect(notaGeral({ ritmo: 50, finalizacao: 50, passe: 50, drible: 50, defesa: 50, fisico: 51 })).toBe(50);
+  it("é a média dos seis atributos com uma casa decimal", () => {
+    expect(notaGeral([9, 9.5, 8, 9, 3.5, 8])).toBe(7.8);
+    expect(notaGeral([5, 5, 5, 5, 5, 6])).toBe(5.2);
+  });
+
+  it("nunca fica abaixo de 1 para não zerar o produto do time", () => {
+    expect(notaGeral([0, 0, 0, 0, 0, 0])).toBe(1);
   });
 });

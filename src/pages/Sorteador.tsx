@@ -7,13 +7,12 @@ import {
   maxTimes,
   capacidadesTimes,
   notaGeral,
-  ATRIBUTOS,
+  atributosDe,
   TAMANHO_TIME,
-  type Atributo,
 } from "@/data/sorteador";
 import { enviarFoto, supabase, useMutar, useRows, type Mensalista } from "@/lib/supabase";
 import { Estado, PageHeader } from "@/components/Editaveis";
-import { CartaJogador, temAtributos } from "@/components/CartaJogador";
+import { CartaJogador, numero } from "@/components/CartaJogador";
 import {
   Shuffle,
   Plus,
@@ -46,22 +45,19 @@ function jogadoresDoNavegador(): Omit<Jogador, "id">[] {
   try {
     const dados = JSON.parse(localStorage.getItem(LEGADO_KEY) ?? "[]");
     if (!Array.isArray(dados)) return [];
-    return dados.map((j: Jogador) => ({
-      nome: j.nome,
-      nota: Math.min(99, Math.round(j.nota * 10)), // escala antiga era 1–10
-      goleiro: !!j.goleiro,
-    }));
+    return dados.map((j: Jogador) => ({ nome: j.nome, nota: j.nota, goleiro: !!j.goleiro }));
   } catch {
     return [];
   }
 }
 
-const ATRIBUTOS_VAZIOS = Object.fromEntries(ATRIBUTOS.map((a) => [a.campo, ""])) as Record<Atributo, string>;
+const ATRIBUTOS_VAZIOS = ["", "", "", "", "", ""];
 
-/** Inteiro de 1 a 99. */
-function valida(valor: string): boolean {
-  const n = Number(valor);
-  return valor.trim() !== "" && Number.isInteger(n) && n >= 1 && n <= 99;
+/** Número de `min` a 10, aceitando meio ponto (vírgula ou ponto). */
+function lerNota(valor: string, min: number): number | null {
+  const n = Number(valor.replace(",", "."));
+  if (valor.trim() === "" || !Number.isInteger(n * 2) || n < min || n > 10) return null;
+  return n;
 }
 
 /** O produto cresce rápido — acima de 1 milhão mostra em notação científica. */
@@ -111,17 +107,11 @@ export default function Sorteador() {
     setEditandoId(null);
   }
 
-  const valoresAtributos = Object.fromEntries(
-    ATRIBUTOS.map((a) => [a.campo, Number(atributos[a.campo])]),
-  ) as Record<Atributo, number>;
+  const valoresAtributos = atributos.map((v) => lerNota(v, 0));
+  const atributosOk = valoresAtributos.every((v) => v !== null) ? (valoresAtributos as number[]) : null;
   const notaPrevia =
-    modo === "atributos"
-      ? ATRIBUTOS.every((a) => valida(atributos[a.campo]))
-        ? notaGeral(valoresAtributos)
-        : null
-      : valida(nota)
-        ? Number(nota)
-        : null;
+    modo === "atributos" ? (atributosOk ? notaGeral(atributosOk) : null) : lerNota(nota, 1);
+  const siglas = atributosDe(ehGoleiro);
 
   async function salvarJogador() {
     const nomeTrim = nome.trim();
@@ -132,18 +122,17 @@ export default function Sorteador() {
     if (notaPrevia === null) {
       toast.error(
         modo === "atributos"
-          ? "Preencha os 6 atributos com números inteiros de 1 a 99."
-          : "A nota geral deve ser um número inteiro de 1 a 99.",
+          ? "Preencha os 6 atributos com notas de 0 a 10 (aceita meio ponto)."
+          : "A nota geral deve ser de 1 a 10 (aceita meio ponto).",
       );
       return;
     }
 
-    const semAtributos = Object.fromEntries(ATRIBUTOS.map((a) => [a.campo, null]));
     const dados = {
       nome: nomeTrim,
       goleiro: ehGoleiro,
       nota: notaPrevia,
-      ...(modo === "atributos" ? valoresAtributos : semAtributos),
+      atributos: modo === "atributos" ? atributosOk : null,
     };
     const ok = editandoId
       ? await mutar(supabase.from("jogadores").update(dados).eq("id", editandoId), "Jogador atualizado.")
@@ -156,10 +145,8 @@ export default function Sorteador() {
     setNome(j.nome);
     setEhGoleiro(j.goleiro);
     setNota(String(j.nota));
-    setModo(temAtributos(j) ? "atributos" : "geral");
-    setAtributos(
-      Object.fromEntries(ATRIBUTOS.map((a) => [a.campo, String(j[a.campo] ?? "")])) as Record<Atributo, string>,
-    );
+    setModo(j.atributos ? "atributos" : "geral");
+    setAtributos(j.atributos ? j.atributos.map(String) : ATRIBUTOS_VAZIOS);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
@@ -195,7 +182,7 @@ export default function Sorteador() {
 
   function importarMensalistas() {
     importar(
-      mensalistas.map((m) => ({ nome: m.nome, nota: 50, goleiro: false })),
+      mensalistas.map((m) => ({ nome: m.nome, nota: 5, goleiro: false })),
       "dos mensalistas",
     );
   }
@@ -435,7 +422,7 @@ export default function Sorteador() {
                         <Hand className="h-3.5 w-3.5 text-primary" />
                       )}
                       <Badge variant="secondary" className="shrink-0">
-                        {j.nota}
+                        {numero(j.nota)}
                       </Badge>
                     </button>
                   ))}
@@ -489,7 +476,7 @@ export default function Sorteador() {
                             <span className="flex-1 text-foreground">
                               {j.nome}
                             </span>
-                            <Badge variant="secondary">{j.nota}</Badge>
+                            <Badge variant="secondary">{numero(j.nota)}</Badge>
                           </li>
                         ))}
                       </ul>
@@ -508,7 +495,7 @@ export default function Sorteador() {
                     {reservas.map((j) => (
                       <Badge key={j.id} variant="outline" className="gap-1.5">
                         {j.nome}
-                        <span className="text-muted-foreground">{j.nota}</span>
+                        <span className="text-muted-foreground">{numero(j.nota)}</span>
                       </Badge>
                     ))}
                   </div>
@@ -571,13 +558,10 @@ export default function Sorteador() {
                   <Label htmlFor="nota">Nota geral</Label>
                   <Input
                     id="nota"
-                    type="number"
-                    inputMode="numeric"
-                    min={1}
-                    max={99}
+                    inputMode="decimal"
                     value={nota}
                     onChange={(e) => setNota(e.target.value)}
-                    placeholder="1–99"
+                    placeholder="1–10"
                     className="font-mono-num mt-1"
                   />
                 </div>
@@ -595,21 +579,18 @@ export default function Sorteador() {
 
             {modo === "atributos" && (
               <div className="mt-4 grid grid-cols-3 gap-3 sm:grid-cols-6">
-                {ATRIBUTOS.map((a) => (
-                  <div key={a.campo}>
-                    <Label htmlFor={a.campo} className="flex items-baseline justify-between gap-1">
+                {siglas.map((a, i) => (
+                  <div key={i}>
+                    <Label htmlFor={`atributo-${i}`} className="flex items-baseline justify-between gap-1">
                       <span className="font-display text-lg tracking-wide text-primary">{a.sigla}</span>
                       <span className="truncate text-[11px] text-muted-foreground">{a.nome}</span>
                     </Label>
                     <Input
-                      id={a.campo}
-                      type="number"
-                      inputMode="numeric"
-                      min={1}
-                      max={99}
-                      value={atributos[a.campo]}
-                      onChange={(e) => setAtributos((v) => ({ ...v, [a.campo]: e.target.value }))}
-                      placeholder="1–99"
+                      id={`atributo-${i}`}
+                      inputMode="decimal"
+                      value={atributos[i]}
+                      onChange={(e) => setAtributos((v) => v.map((x, k) => (k === i ? e.target.value : x)))}
+                      placeholder="0–10"
                       className="font-mono-num mt-1"
                     />
                   </div>
@@ -620,7 +601,7 @@ export default function Sorteador() {
             <div className="mt-5 flex flex-wrap items-center gap-3 border-t border-border/70 pt-4">
               <p className="mr-auto flex items-baseline gap-2 text-sm text-muted-foreground">
                 Nota geral
-                <span className="font-display text-4xl leading-none text-foreground">{notaPrevia ?? "—"}</span>
+                <span className="font-display text-4xl leading-none text-foreground">{notaPrevia === null ? "—" : numero(notaPrevia)}</span>
                 {modo === "atributos" && <span>média dos 6 atributos</span>}
               </p>
               {editandoId && (

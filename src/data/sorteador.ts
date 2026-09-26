@@ -1,27 +1,42 @@
 /** Atributos da carta, na ordem em que aparecem (duas colunas de três). */
-export const ATRIBUTOS = [
-  { campo: "ritmo", sigla: "RIT", nome: "Ritmo" },
-  { campo: "finalizacao", sigla: "FIN", nome: "Finalização" },
-  { campo: "passe", sigla: "PAS", nome: "Passe" },
-  { campo: "drible", sigla: "DRI", nome: "Drible" },
-  { campo: "defesa", sigla: "DEF", nome: "Defesa" },
-  { campo: "fisico", sigla: "FIS", nome: "Físico" },
-] as const;
+export const ATRIBUTOS_LINHA = [
+  { sigla: "RIT", nome: "Ritmo" },
+  { sigla: "FIN", nome: "Finalização" },
+  { sigla: "PAS", nome: "Passe" },
+  { sigla: "DRI", nome: "Drible" },
+  { sigla: "DEF", nome: "Defesa" },
+  { sigla: "FIS", nome: "Físico" },
+];
 
-export type Atributo = (typeof ATRIBUTOS)[number]["campo"];
+/** Goleiro usa os mesmos 6 espaços da carta, como no FIFA. */
+export const ATRIBUTOS_GOLEIRO = [
+  { sigla: "ELA", nome: "Elasticidade" },
+  { sigla: "MAN", nome: "Manejo" },
+  { sigla: "CHU", nome: "Chute" },
+  { sigla: "REF", nome: "Reflexos" },
+  { sigla: "VEL", nome: "Velocidade" },
+  { sigla: "POS", nome: "Posicionamento" },
+];
 
-export type Jogador = {
+export const atributosDe = (goleiro: boolean) => (goleiro ? ATRIBUTOS_GOLEIRO : ATRIBUTOS_LINHA);
+
+export interface Jogador {
   id: string;
   nome: string;
-  nota: number; // nota geral, de 1 a 99
+  nota: number; // nota geral, de 1 a 10
   goleiro: boolean;
+  /** 6 valores de 0 a 10 na ordem da carta; null quando a nota geral foi dada direto */
+  atributos?: number[] | null;
   foto_url?: string | null;
-} & Partial<Record<Atributo, number | null>>;
+}
 
-/** Nota geral = média simples dos atributos, arredondada. */
-export function notaGeral(atributos: Record<Atributo, number>): number {
-  const valores = ATRIBUTOS.map((a) => atributos[a.campo]);
-  return Math.round(valores.reduce((acc, v) => acc + v, 0) / valores.length);
+/**
+ * Nota geral = média dos atributos com uma casa decimal.
+ * ponytail: piso de 1 porque nota 0 zeraria o produto do time no sorteio.
+ */
+export function notaGeral(atributos: number[]): number {
+  const media = atributos.reduce((acc, v) => acc + v, 0) / atributos.length;
+  return Math.max(1, Math.round(media * 10) / 10);
 }
 
 export interface Time {
