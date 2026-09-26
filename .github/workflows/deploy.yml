@@ -27,6 +27,10 @@ jobs:
 
       - name: Build
         run: npm run build
+        env:
+          # Settings → Secrets and variables → Actions → Variables (são chaves públicas)
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY }}
 
       - name: Upload Artifacts
         uses: actions/upload-pages-artifact@v3

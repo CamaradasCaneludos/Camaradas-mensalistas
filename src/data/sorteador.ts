@@ -11,30 +11,6 @@ export interface Time {
   produto: number;
 }
 
-const STORAGE_KEY = "camaradas:jogadores";
-
-/* ── Persistência (localStorage) ── */
-
-export function carregarJogadores(): Jogador[] {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return [];
-    const dados = JSON.parse(raw) as Jogador[];
-    if (!Array.isArray(dados)) return [];
-    return dados;
-  } catch {
-    return [];
-  }
-}
-
-export function salvarJogadores(jogadores: Jogador[]): void {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(jogadores));
-}
-
-export function novoId(): string {
-  return `${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
-}
-
 /* ── Sorteio ── */
 
 /** Jogadores de linha por time (o goleiro é à parte). */

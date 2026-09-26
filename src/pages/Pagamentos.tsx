@@ -1,62 +1,75 @@
-import { pagamento } from "@/data/mockData";
-import { CreditCard, Key, Building, User, DollarSign, Clock, AlertTriangle } from "lucide-react";
-import pixQrCode from "@/assets/pix-qrcode.JPG";
-
-const infoItems = [
-  { icon: CreditCard, label: "Forma de pagamento", value: pagamento.forma },
-  { icon: Key, label: "Chave PIX", value: pagamento.chave },
-  { icon: Building, label: "Banco", value: pagamento.banco },
-  { icon: User, label: "Titular", value: pagamento.titular },
-  { icon: DollarSign, label: "Valor", value: `R$ ${pagamento.valor.toFixed(2).replace(".", ",")}` },
-  { icon: Clock, label: "Prazo de pagamento", value: pagamento.prazo },
-];
+import { AlertTriangle, Building, Clock, Copy, DollarSign, Key, Upload, User } from "lucide-react";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { CampoConfig, ListaTextos, PageHeader, painel, reais } from "@/components/Editaveis";
+import { enviarFoto, supabase, useConfig, useMutar, useSession } from "@/lib/supabase";
 
 export default function Pagamentos() {
+  const session = useSession();
+  const { data: config } = useConfig();
+  const mutar = useMutar("config");
+
+  async function trocarQr(file?: File) {
+    if (!file) return;
+    try {
+      const url = await enviarFoto(file);
+      await mutar(supabase.from("config").update({ pix_qr_url: url }).eq("id", 1), "QR code atualizado.");
+    } catch {
+      toast.error("Não foi possível enviar a imagem.");
+    }
+  }
+
+  async function copiarChave() {
+    if (!config) return;
+    await navigator.clipboard.writeText(config.pix_chave);
+    toast.success("Chave PIX copiada.");
+  }
+
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="font-display text-4xl tracking-wider text-primary">PAGAMENTO</h1>
-        <p className="mt-1 text-muted-foreground">Informações para pagamento da mensalidade.</p>
-      </div>
+    <>
+      <PageHeader kicker="Mensalidade" titulo="Pagamento">
+        Como pagar a mensalidade do futebol.
+      </PageHeader>
 
-      <div className="rounded-xl border border-primary/20 bg-card p-6 shadow-sm">
-        <div className="grid gap-4 sm:grid-cols-2">
-          {infoItems.map((item) => (
-            <div key={item.label} className="flex items-start gap-3 rounded-lg bg-muted/50 p-4">
-              <item.icon className="mt-0.5 h-5 w-5 text-primary" />
-              <div>
-                <p className="text-xs font-medium text-muted-foreground">{item.label}</p>
-                <p className="text-sm font-semibold text-foreground">{item.value}</p>
-              </div>
-            </div>
-          ))}
+      <div className="rise grid gap-4 lg:grid-cols-[minmax(0,20rem)_1fr]">
+        <section className={`${painel} flex flex-col items-center gap-4 text-center`}>
+          <h2 className="text-2xl">QR code PIX</h2>
+          <div className="w-full max-w-[15rem] rounded-xl bg-white p-3">
+            {config?.pix_qr_url ? (
+              <img src={config.pix_qr_url} alt="QR code para pagamento via PIX" className="w-full" />
+            ) : (
+              <Skeleton className="aspect-square w-full bg-neutral-200" />
+            )}
+          </div>
+          <Button variant="secondary" className="w-full" onClick={copiarChave} disabled={!config}>
+            <Copy /> Copiar chave PIX
+          </Button>
+          {session && (
+            <label className="inline-flex cursor-pointer items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground">
+              <Upload className="h-4 w-4" /> Trocar imagem do QR
+              <input type="file" accept="image/*" className="sr-only" onChange={(e) => trocarQr(e.target.files?.[0])} />
+            </label>
+          )}
+        </section>
+
+        <div className="grid content-start gap-4">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <CampoConfig campo="valor" label="Valor" icon={DollarSign} formatar={reais} />
+            <CampoConfig campo="pix_chave" label="Chave PIX" icon={Key} />
+            <CampoConfig campo="pix_banco" label="Banco" icon={Building} />
+            <CampoConfig campo="pix_titular" label="Titular" icon={User} />
+            <CampoConfig campo="pix_prazo" label="Prazo" icon={Clock} className="sm:col-span-2" />
+          </div>
+
+          <section className="rounded-2xl border border-primary/30 bg-primary/[0.06] p-5 md:p-6">
+            <h2 className="mb-4 flex items-center gap-2 text-2xl text-primary">
+              <AlertTriangle className="h-5 w-5" /> Atenção
+            </h2>
+            <ListaTextos secao="pagamento" />
+          </section>
         </div>
       </div>
-
-      {/* QR Code PIX */}
-      <div className="rounded-xl border border-primary/20 bg-card p-6 shadow-sm flex flex-col items-center gap-3">
-        <h2 className="font-display text-xl tracking-wider text-primary">QR CODE PIX</h2>
-        <p className="text-sm text-muted-foreground">Escaneie o código abaixo para pagar via PIX</p>
-        <div className="rounded-lg bg-white p-3">
-          <img src={pixQrCode} alt="QR Code Pix" />
-        </div>
-        <p className="text-xs text-muted-foreground">Chave: {pagamento.chave}</p>
-      </div>
-
-      {/* Avisos */}
-      <div className="rounded-xl border border-primary/40 bg-primary/5 p-5 shadow-sm">
-        <div className="flex items-center gap-2 mb-3">
-          <AlertTriangle className="h-5 w-5 text-primary" />
-          <h2 className="font-display text-xl tracking-wider text-primary">ATENÇÃO</h2>
-        </div>
-        <ul className="space-y-2">
-          {pagamento.avisos.map((aviso, i) => (
-            <li key={i} className="flex items-center gap-2 text-sm font-semibold text-primary">
-              <span>⚠️</span> {aviso}
-            </li>
-          ))}
-        </ul>
-      </div>
-    </div>
+    </>
   );
 }

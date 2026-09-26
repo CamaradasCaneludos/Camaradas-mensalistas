@@ -1,17 +1,15 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   Jogador,
   Time,
-  carregarJogadores,
-  salvarJogadores,
-  novoId,
   sortearTimes,
   mediaTime,
   maxTimes,
   capacidadesTimes,
   TAMANHO_TIME,
 } from "@/data/sorteador";
-import { mensalistas } from "@/data/mockData";
+import { supabase, useMutar, useRows, type Mensalista } from "@/lib/supabase";
+import { Estado, PageHeader } from "@/components/Editaveis";
 import {
   Shuffle,
   Plus,
@@ -36,6 +34,19 @@ import {
 } from "@/components/ui/tabs";
 import { toast } from "sonner";
 
+/** O sorteador antigo guardava os jogadores no navegador; dá para importar uma vez. */
+const LEGADO_KEY = "camaradas:jogadores";
+
+function jogadoresDoNavegador(): Omit<Jogador, "id">[] {
+  try {
+    const dados = JSON.parse(localStorage.getItem(LEGADO_KEY) ?? "[]");
+    if (!Array.isArray(dados)) return [];
+    return dados.map((j: Jogador) => ({ nome: j.nome, nota: j.nota, goleiro: !!j.goleiro }));
+  } catch {
+    return [];
+  }
+}
+
 /** O produto cresce rápido — acima de 1 milhão mostra em notação científica. */
 function formatarProduto(valor: number): string {
   if (valor >= 1e6) return valor.toExponential(2).replace("e+", " × 10^");
@@ -52,7 +63,11 @@ function vagasLivres(time: Time): number {
 }
 
 export default function Sorteador() {
-  const [jogadores, setJogadores] = useState<Jogador[]>([]);
+  const q = useRows<Jogador>("jogadores", "nome");
+  const jogadores = useMemo(() => q.data ?? [], [q.data]);
+  const { data: mensalistas = [] } = useRows<Mensalista>("mensalistas");
+  const mutar = useMutar("jogadores");
+  const [legados, setLegados] = useState(jogadoresDoNavegador);
 
   // formulário de cadastro / edição
   const [nome, setNome] = useState("");
@@ -60,24 +75,12 @@ export default function Sorteador() {
   const [ehGoleiro, setEhGoleiro] = useState(false);
   const [editandoId, setEditandoId] = useState<string | null>(null);
 
-  // sorteio
-  const [presentes, setPresentes] = useState<Record<string, boolean>>({});
+  // sorteio — todo mundo começa presente
+  const [ausentes, setAusentes] = useState<Record<string, boolean>>({});
   const [numTimes, setNumTimes] = useState(2);
   const [goleiroPorTime, setGoleiroPorTime] = useState<Record<string, number>>({});
   const [resultado, setResultado] = useState<Time[] | null>(null);
   const [reservas, setReservas] = useState<Jogador[]>([]);
-
-  /* ── carregar do localStorage ── */
-  useEffect(() => {
-    const dados = carregarJogadores();
-    setJogadores(dados);
-    setPresentes(Object.fromEntries(dados.map((j) => [j.id, true])));
-  }, []);
-
-  function persistir(lista: Jogador[]) {
-    setJogadores(lista);
-    salvarJogadores(lista);
-  }
 
   /* ── cadastro ── */
   function limparForm() {
@@ -87,7 +90,7 @@ export default function Sorteador() {
     setEditandoId(null);
   }
 
-  function salvarJogador() {
+  async function salvarJogador() {
     const nomeTrim = nome.trim();
     const notaNum = parseFloat(nota.replace(",", "."));
 
@@ -100,26 +103,11 @@ export default function Sorteador() {
       return;
     }
 
-    if (editandoId) {
-      const lista = jogadores.map((j) =>
-        j.id === editandoId
-          ? { ...j, nome: nomeTrim, nota: notaNum, goleiro: ehGoleiro }
-          : j,
-      );
-      persistir(lista);
-      toast.success("Jogador atualizado.");
-    } else {
-      const novo: Jogador = {
-        id: novoId(),
-        nome: nomeTrim,
-        nota: notaNum,
-        goleiro: ehGoleiro,
-      };
-      persistir([...jogadores, novo]);
-      setPresentes((p) => ({ ...p, [novo.id]: true }));
-      toast.success("Jogador cadastrado.");
-    }
-    limparForm();
+    const dados = { nome: nomeTrim, nota: notaNum, goleiro: ehGoleiro };
+    const ok = editandoId
+      ? await mutar(supabase.from("jogadores").update(dados).eq("id", editandoId), "Jogador atualizado.")
+      : await mutar(supabase.from("jogadores").insert(dados), "Jogador cadastrado.");
+    if (ok) limparForm();
   }
 
   function editar(j: Jogador) {
@@ -129,39 +117,44 @@ export default function Sorteador() {
     setEhGoleiro(j.goleiro);
   }
 
-  function remover(id: string) {
-    persistir(jogadores.filter((j) => j.id !== id));
-    setPresentes((p) => {
-      const novo = { ...p };
-      delete novo[id];
-      return novo;
-    });
-    if (editandoId === id) limparForm();
-    toast.success("Jogador removido.");
+  async function remover(j: Jogador) {
+    if (!confirm(`Remover ${j.nome}?`)) return;
+    const ok = await mutar(supabase.from("jogadores").delete().eq("id", j.id), "Jogador removido.");
+    if (ok && editandoId === j.id) limparForm();
+  }
+
+  /** Insere só quem ainda não está cadastrado (compara pelo nome). */
+  async function importar(lista: Omit<Jogador, "id">[], origem: string) {
+    const existentes = new Set(jogadores.map((j) => j.nome.toLowerCase()));
+    const novos = lista.filter((j) => !existentes.has(j.nome.toLowerCase()));
+    if (novos.length === 0) {
+      toast.info(`Todos os jogadores ${origem} já estão cadastrados.`);
+      return true;
+    }
+    return mutar(
+      supabase.from("jogadores").insert(novos),
+      `${novos.length} jogador(es) ${origem} importado(s).`,
+    );
   }
 
   function importarMensalistas() {
-    const existentes = new Set(jogadores.map((j) => j.nome.toLowerCase()));
-    const novos: Jogador[] = mensalistas
-      .filter((m) => !existentes.has(m.nome.toLowerCase()))
-      .map((m) => ({ id: novoId(), nome: m.nome, nota: 5, goleiro: false }));
+    importar(
+      mensalistas.map((m) => ({ nome: m.nome, nota: 5, goleiro: false })),
+      "dos mensalistas",
+    );
+  }
 
-    if (novos.length === 0) {
-      toast.info("Todos os mensalistas já estão cadastrados.");
-      return;
+  async function importarDoNavegador() {
+    if (await importar(legados, "do navegador")) {
+      localStorage.removeItem(LEGADO_KEY);
+      setLegados([]);
     }
-    persistir([...jogadores, ...novos]);
-    setPresentes((p) => ({
-      ...p,
-      ...Object.fromEntries(novos.map((j) => [j.id, true])),
-    }));
-    toast.success(`${novos.length} mensalista(s) importado(s) com nota 5.`);
   }
 
   /* ── sorteio ── */
   const jogadoresPresentes = useMemo(
-    () => jogadores.filter((j) => presentes[j.id]),
-    [jogadores, presentes],
+    () => jogadores.filter((j) => !ausentes[j.id]),
+    [jogadores, ausentes],
   );
   const goleirosPresentes = useMemo(
     () => jogadoresPresentes.filter((j) => j.goleiro),
@@ -178,11 +171,11 @@ export default function Sorteador() {
   );
 
   function togglePresenca(id: string) {
-    setPresentes((p) => ({ ...p, [id]: !p[id] }));
+    setAusentes((a) => ({ ...a, [id]: !a[id] }));
   }
 
-  function marcarTodos(valor: boolean) {
-    setPresentes(Object.fromEntries(jogadores.map((j) => [j.id, valor])));
+  function marcarTodos(presentes: boolean) {
+    setAusentes(presentes ? {} : Object.fromEntries(jogadores.map((j) => [j.id, true])));
   }
 
   function sortear() {
@@ -226,17 +219,13 @@ export default function Sorteador() {
     "5.5", "6", "6.5", "7", "7.5", "8", "8.5", "9", "9.5", "10",
   ];
 
+  if (!q.data) return <Estado q={q} linhas={6} />;
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="font-display text-4xl tracking-wider text-primary">
-          SORTEADOR DE TIMES
-        </h1>
-        <p className="mt-1 text-muted-foreground">
-          Cadastre os jogadores com suas notas e gere times equilibrados pelo
-          produto das notas.
-        </p>
-      </div>
+      <PageHeader kicker="Só para quem está logado" titulo="Sorteador de times">
+        Marque quem veio e gere times equilibrados pelo produto das notas.
+      </PageHeader>
 
       <Tabs defaultValue="sortear" className="w-full">
         <TabsList className="grid w-full max-w-md grid-cols-2">
@@ -251,7 +240,7 @@ export default function Sorteador() {
         {/* ─────────────── ABA SORTEAR ─────────────── */}
         <TabsContent value="sortear" className="mt-6 space-y-6">
           {jogadores.length === 0 ? (
-            <div className="rounded-xl border border-primary/20 bg-card p-8 text-center">
+            <div className="rounded-2xl border border-border/70 bg-card/80 p-8 text-center">
               <Users className="mx-auto h-10 w-10 text-muted-foreground" />
               <p className="mt-3 text-muted-foreground">
                 Nenhum jogador cadastrado ainda. Vá para a aba{" "}
@@ -262,7 +251,7 @@ export default function Sorteador() {
           ) : (
             <>
               {/* Configuração */}
-              <div className="rounded-xl border border-primary/20 bg-card p-5 shadow-sm">
+              <div className="rounded-2xl border border-border/70 bg-card/80 p-5">
                 <div className="flex flex-wrap items-end gap-4">
                   <div>
                     <Label htmlFor="numTimes">Número de times</Label>
@@ -346,7 +335,7 @@ export default function Sorteador() {
               </div>
 
               {/* Presença */}
-              <div className="rounded-xl border border-primary/20 bg-card p-5 shadow-sm">
+              <div className="rounded-2xl border border-border/70 bg-card/80 p-5">
                 <div className="mb-3 flex items-center justify-between">
                   <p className="text-sm font-medium text-foreground">
                     Quem vai jogar hoje?
@@ -374,19 +363,19 @@ export default function Sorteador() {
                       key={j.id}
                       onClick={() => togglePresenca(j.id)}
                       className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-left text-sm transition-colors ${
-                        presentes[j.id]
+                        !ausentes[j.id]
                           ? "border-primary/40 bg-primary/5"
                           : "border-border bg-muted/30 opacity-60"
                       }`}
                     >
                       <span
                         className={`flex h-5 w-5 shrink-0 items-center justify-center rounded ${
-                          presentes[j.id]
+                          !ausentes[j.id]
                             ? "bg-primary text-primary-foreground"
                             : "bg-muted"
                         }`}
                       >
-                        {presentes[j.id] ? <Check className="h-3.5 w-3.5" /> : null}
+                        {!ausentes[j.id] ? <Check className="h-3.5 w-3.5" /> : null}
                       </span>
                       <span className="flex-1 truncate text-foreground">
                         {j.nome}
@@ -408,7 +397,7 @@ export default function Sorteador() {
                   {resultado.map((time, i) => (
                     <div
                       key={i}
-                      className="rounded-xl border border-primary/20 bg-card shadow-sm"
+                      className="rounded-2xl border border-border/70 bg-card/80"
                     >
                       <div className="flex items-center justify-between border-b border-border px-4 py-3">
                         <div className="flex items-center gap-2">
@@ -460,7 +449,7 @@ export default function Sorteador() {
 
               {/* Fora dos times */}
               {resultado && reservas.length > 0 && (
-                <div className="rounded-xl border border-primary/20 bg-card p-5 shadow-sm">
+                <div className="rounded-2xl border border-border/70 bg-card/80 p-5">
                   <p className="mb-3 text-sm font-medium text-foreground">
                     Fora dos times ({reservas.length})
                   </p>
@@ -481,7 +470,7 @@ export default function Sorteador() {
         {/* ─────────────── ABA JOGADORES ─────────────── */}
         <TabsContent value="jogadores" className="mt-6 space-y-6">
           {/* Formulário */}
-          <div className="rounded-xl border border-primary/20 bg-card p-5 shadow-sm">
+          <div className="rounded-2xl border border-border/70 bg-card/80 p-5">
             <p className="mb-4 text-sm font-medium text-foreground">
               {editandoId ? "Editar jogador" : "Cadastrar jogador"}
             </p>
@@ -547,19 +536,21 @@ export default function Sorteador() {
           </div>
 
           {/* Lista */}
-          <div className="rounded-xl border border-primary/20 bg-card shadow-sm">
+          <div className="rounded-2xl border border-border/70 bg-card/80">
             <div className="flex items-center justify-between border-b border-border px-4 py-3">
               <p className="text-sm font-medium text-foreground">
                 Jogadores cadastrados ({jogadores.length})
               </p>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={importarMensalistas}
-                className="gap-2"
-              >
-                <Download className="h-4 w-4" /> Importar mensalistas
-              </Button>
+              <div className="flex flex-wrap justify-end gap-2">
+                {legados.length > 0 && (
+                  <Button variant="outline" size="sm" onClick={importarDoNavegador}>
+                    <Download /> Importar do navegador ({legados.length})
+                  </Button>
+                )}
+                <Button variant="outline" size="sm" onClick={importarMensalistas}>
+                  <Download /> Importar mensalistas
+                </Button>
+              </div>
             </div>
 
             {jogadores.length === 0 ? (
@@ -616,7 +607,7 @@ export default function Sorteador() {
                             <Button
                               variant="ghost"
                               size="icon"
-                              onClick={() => remover(j.id)}
+                              onClick={() => remover(j)}
                             >
                               <Trash2 className="h-4 w-4 text-destructive" />
                             </Button>

@@ -1,111 +1,94 @@
-import { useState } from "react";
-import { Link, useLocation } from "react-router-dom";
-import {
-  LayoutDashboard,
-  ScrollText,
-  MapPin,
-  CreditCard,
-  Users,
-  AlertCircle,
-  Skull,
-  Eye,
-  Shuffle,
-  Menu,
-  X,
-} from "lucide-react";
+import { Link, NavLink } from "react-router-dom";
+import { Lock, LogIn, LogOut } from "lucide-react";
+import { supabase, useSession } from "@/lib/supabase";
 
 const navItems = [
-  { to: "/", label: "Início", icon: LayoutDashboard },
-  { to: "/regras", label: "Regras", icon: ScrollText },
-  { to: "/jogo", label: "Futebol", icon: MapPin },
-  { to: "/sorteador", label: "Sorteador de Times", icon: Shuffle },
-  { to: "/ranking", label: "Mural da Vergonha", icon: Skull },
-  { to: "/mensalistas", label: "Mensalistas", icon: Users },
-  { to: "/pagamento", label: "Pagamento", icon: CreditCard },
-  { to: "/transparencia", label: "Transparência", icon: Eye },
-  { to: "/observacoes", label: "Observações", icon: AlertCircle },
+  { to: "/", label: "Início" },
+  { to: "/jogo", label: "Futebol" },
+  { to: "/regras", label: "Regras" },
+  { to: "/mensalistas", label: "Mensalistas" },
+  { to: "/pagamento", label: "Pagamento" },
+  { to: "/ranking", label: "Mural da vergonha" },
+  { to: "/observacoes", label: "Observações" },
+  { to: "/sorteador", label: "Sorteador", privado: true },
 ];
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
-  const location = useLocation();
-  const [mobileOpen, setMobileOpen] = useState(false);
+  const session = useSession();
+
+  const links = navItems.map((item) => (
+    <NavLink
+      key={item.to}
+      to={item.to}
+      end
+      className={({ isActive }) =>
+        `inline-flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm transition-colors ${
+          isActive
+            ? "bg-secondary text-foreground"
+            : "text-muted-foreground hover:bg-secondary/60 hover:text-foreground"
+        }`
+      }
+    >
+      {item.label}
+      {item.privado && !session && <Lock className="h-3 w-3 opacity-60" />}
+    </NavLink>
+  ));
 
   return (
-    <div className="flex min-h-screen">
-      {mobileOpen && (
-        <div
-          className="fixed inset-0 z-40 bg-black/60 lg:hidden"
-          onClick={() => setMobileOpen(false)}
-        />
-      )}
-
-      <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-64 flex-col bg-sidebar text-sidebar-foreground transition-transform duration-300 lg:static lg:translate-x-0 ${
-          mobileOpen ? "translate-x-0" : "-translate-x-full"
-        }`}
+    <div className="flex min-h-dvh flex-col">
+      <button
+        onClick={() => document.getElementById("conteudo")?.focus()}
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-primary focus:px-4 focus:py-2 focus:text-primary-foreground"
       >
-        <div className="flex items-center gap-3 border-b border-sidebar-border px-5 py-5">
-        {/* Container da Logo */}
-        <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-lg">
-          <img 
-            src="logo-site.png" 
-            alt="Logo Camaradas Caneludos"
-            className="h-full w-full object-cover" 
-          />
-        </div>
+        Pular para o conteúdo
+      </button>
 
-        {/* Texto ao lado */}
-        <div>
-          <h1 className="font-display text-xl leading-tight tracking-wider text-primary">
-            CAMARADAS
-          </h1>
-          <p className="text-xs text-sidebar-foreground/60">CANELUDOS</p>
-        </div>
-      </div>
+      <header className="sticky top-0 z-40 border-b border-border/70 bg-background/75 backdrop-blur-xl">
+        <div className="mx-auto flex h-16 max-w-6xl items-center gap-6 px-4">
+          <Link to="/" className="flex shrink-0 items-center gap-2.5">
+            <img
+              src={`${import.meta.env.BASE_URL}logo-site.png`}
+              alt="Escudo Camaradas Caneludos"
+              className="h-9 w-9 rounded-lg object-cover"
+            />
+            <span className="font-display text-xl leading-none tracking-wider">
+              CAMARADAS <span className="text-primary">CANELUDOS</span>
+            </span>
+          </Link>
 
-        <nav className="flex-1 space-y-1 px-3 py-4">
-          {navItems.map((item) => {
-            const active = location.pathname === item.to;
-            return (
-              <Link
-                key={item.to}
-                to={item.to}
-                onClick={() => setMobileOpen(false)}
-                className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
-                  active
-                    ? "bg-sidebar-accent text-primary"
-                    : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground"
-                }`}
+          <nav className="hidden flex-1 items-center gap-0.5 lg:flex">{links}</nav>
+
+          <div className="ml-auto lg:ml-0">
+            {session ? (
+              <button
+                onClick={() => supabase.auth.signOut()}
+                className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
               >
-                <item.icon className="h-5 w-5" />
-                {item.label}
+                <LogOut className="h-4 w-4" /> Sair
+              </button>
+            ) : (
+              <Link
+                to="/login"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-sm text-foreground transition-colors hover:border-primary/60"
+              >
+                <LogIn className="h-4 w-4" /> Entrar
               </Link>
-            );
-          })}
-        </nav>
-
-        <div className="border-t border-sidebar-border px-5 py-4">
-          <p className="text-xs text-sidebar-foreground/40">
-            © 2026 Camaradas Caneludos
-          </p>
+            )}
+          </div>
         </div>
-      </aside>
 
-      <div className="flex flex-1 flex-col">
-        <header className="flex items-center gap-3 border-b border-border bg-card px-4 py-3 lg:hidden">
-          <button
-            onClick={() => setMobileOpen(true)}
-            className="rounded-lg p-2 text-foreground hover:bg-muted"
-          >
-            <Menu className="h-5 w-5" />
-          </button>
-          <h1 className="font-display text-lg tracking-wider text-primary">CAMARADAS CANELUDOS</h1>
-        </header>
+        <nav className="flex gap-1 overflow-x-auto px-4 pb-2.5 [scrollbar-width:none] lg:hidden">
+          {links}
+        </nav>
+      </header>
 
-        <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
-          {children}
-        </main>
-      </div>
+      <main id="conteudo" tabIndex={-1} className="mx-auto w-full max-w-6xl flex-1 px-4 py-10 outline-none md:py-14">
+        {children}
+      </main>
+
+      <footer className="mx-auto w-full max-w-6xl px-4 pb-8 pt-4 text-xs text-muted-foreground">
+        © 2026 Camaradas Caneludos · domingo é sagrado
+      </footer>
     </div>
   );
 }

@@ -1,8 +1,7 @@
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
+import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { HashRouter, Routes, Route, BrowserRouter } from "react-router-dom"; 
+import { HashRouter, Navigate, Routes, Route, useLocation } from "react-router-dom";
 import AppLayout from "./components/AppLayout";
 import Dashboard from "./pages/Dashboard";
 import Regras from "./pages/Regras";
@@ -12,16 +11,24 @@ import Mensalistas from "./pages/Mensalistas";
 import Observacoes from "./pages/Observacoes";
 import NotFound from "./pages/NotFound";
 import Ranking from "./pages/Ranking";
-import Transparencia from "./pages/Transparencia";
 import Sorteador from "./pages/Sorteador";
+import Login from "./pages/Login";
+import { useSession } from "./lib/supabase";
 
 const queryClient = new QueryClient();
+
+function SoLogado({ children }: { children: React.ReactNode }) {
+  const session = useSession();
+  const location = useLocation();
+  if (session === undefined) return null;
+  if (!session) return <Navigate to="/login" replace state={{ de: location.pathname }} />;
+  return children;
+}
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
-      <Toaster />
-      <Sonner />
+      <Toaster theme="dark" position="top-center" />
       <HashRouter>
         <AppLayout>
           <Routes>
@@ -31,9 +38,16 @@ const App = () => (
             <Route path="/ranking" element={<Ranking />} />
             <Route path="/pagamento" element={<Pagamentos />} />
             <Route path="/mensalistas" element={<Mensalistas />} />
-            <Route path="/sorteador" element={<Sorteador />} />
-            <Route path="/transparencia" element={<Transparencia />} />
             <Route path="/observacoes" element={<Observacoes />} />
+            <Route path="/login" element={<Login />} />
+            <Route
+              path="/sorteador"
+              element={
+                <SoLogado>
+                  <Sorteador />
+                </SoLogado>
+              }
+            />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AppLayout>
