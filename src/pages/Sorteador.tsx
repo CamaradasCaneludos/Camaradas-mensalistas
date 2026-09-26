@@ -6,10 +6,14 @@ import {
   mediaTime,
   maxTimes,
   capacidadesTimes,
+  notaGeral,
+  ATRIBUTOS,
   TAMANHO_TIME,
+  type Atributo,
 } from "@/data/sorteador";
-import { supabase, useMutar, useRows, type Mensalista } from "@/lib/supabase";
+import { enviarFoto, supabase, useMutar, useRows, type Mensalista } from "@/lib/supabase";
 import { Estado, PageHeader } from "@/components/Editaveis";
+import { CartaJogador, temAtributos } from "@/components/CartaJogador";
 import {
   Shuffle,
   Plus,
@@ -21,6 +25,7 @@ import {
   Check,
   X,
   Download,
+  Camera,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -41,10 +46,22 @@ function jogadoresDoNavegador(): Omit<Jogador, "id">[] {
   try {
     const dados = JSON.parse(localStorage.getItem(LEGADO_KEY) ?? "[]");
     if (!Array.isArray(dados)) return [];
-    return dados.map((j: Jogador) => ({ nome: j.nome, nota: j.nota, goleiro: !!j.goleiro }));
+    return dados.map((j: Jogador) => ({
+      nome: j.nome,
+      nota: Math.min(99, Math.round(j.nota * 10)), // escala antiga era 1–10
+      goleiro: !!j.goleiro,
+    }));
   } catch {
     return [];
   }
+}
+
+const ATRIBUTOS_VAZIOS = Object.fromEntries(ATRIBUTOS.map((a) => [a.campo, ""])) as Record<Atributo, string>;
+
+/** Inteiro de 1 a 99. */
+function valida(valor: string): boolean {
+  const n = Number(valor);
+  return valor.trim() !== "" && Number.isInteger(n) && n >= 1 && n <= 99;
 }
 
 /** O produto cresce rápido — acima de 1 milhão mostra em notação científica. */
@@ -71,8 +88,11 @@ export default function Sorteador() {
 
   // formulário de cadastro / edição
   const [nome, setNome] = useState("");
-  const [nota, setNota] = useState("");
   const [ehGoleiro, setEhGoleiro] = useState(false);
+  // "atributos": nota geral = média dos 6; "geral": nota dada direto (quem vai pouco)
+  const [modo, setModo] = useState<"atributos" | "geral">("atributos");
+  const [atributos, setAtributos] = useState(ATRIBUTOS_VAZIOS);
+  const [nota, setNota] = useState("");
   const [editandoId, setEditandoId] = useState<string | null>(null);
 
   // sorteio — todo mundo começa presente
@@ -86,24 +106,45 @@ export default function Sorteador() {
   function limparForm() {
     setNome("");
     setNota("");
+    setAtributos(ATRIBUTOS_VAZIOS);
     setEhGoleiro(false);
     setEditandoId(null);
   }
 
+  const valoresAtributos = Object.fromEntries(
+    ATRIBUTOS.map((a) => [a.campo, Number(atributos[a.campo])]),
+  ) as Record<Atributo, number>;
+  const notaPrevia =
+    modo === "atributos"
+      ? ATRIBUTOS.every((a) => valida(atributos[a.campo]))
+        ? notaGeral(valoresAtributos)
+        : null
+      : valida(nota)
+        ? Number(nota)
+        : null;
+
   async function salvarJogador() {
     const nomeTrim = nome.trim();
-    const notaNum = parseFloat(nota.replace(",", "."));
-
     if (!nomeTrim) {
       toast.error("Informe o nome do jogador.");
       return;
     }
-    if (isNaN(notaNum) || notaNum < 1 || notaNum > 10) {
-      toast.error("A nota deve ser um número de 1 a 10.");
+    if (notaPrevia === null) {
+      toast.error(
+        modo === "atributos"
+          ? "Preencha os 6 atributos com números inteiros de 1 a 99."
+          : "A nota geral deve ser um número inteiro de 1 a 99.",
+      );
       return;
     }
 
-    const dados = { nome: nomeTrim, nota: notaNum, goleiro: ehGoleiro };
+    const semAtributos = Object.fromEntries(ATRIBUTOS.map((a) => [a.campo, null]));
+    const dados = {
+      nome: nomeTrim,
+      goleiro: ehGoleiro,
+      nota: notaPrevia,
+      ...(modo === "atributos" ? valoresAtributos : semAtributos),
+    };
     const ok = editandoId
       ? await mutar(supabase.from("jogadores").update(dados).eq("id", editandoId), "Jogador atualizado.")
       : await mutar(supabase.from("jogadores").insert(dados), "Jogador cadastrado.");
@@ -113,8 +154,23 @@ export default function Sorteador() {
   function editar(j: Jogador) {
     setEditandoId(j.id);
     setNome(j.nome);
-    setNota(String(j.nota));
     setEhGoleiro(j.goleiro);
+    setNota(String(j.nota));
+    setModo(temAtributos(j) ? "atributos" : "geral");
+    setAtributos(
+      Object.fromEntries(ATRIBUTOS.map((a) => [a.campo, String(j[a.campo] ?? "")])) as Record<Atributo, string>,
+    );
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  async function trocarFoto(j: Jogador, file?: File) {
+    if (!file) return;
+    try {
+      const foto_url = await enviarFoto(file);
+      await mutar(supabase.from("jogadores").update({ foto_url }).eq("id", j.id));
+    } catch {
+      toast.error("Não foi possível enviar a foto.");
+    }
   }
 
   async function remover(j: Jogador) {
@@ -139,7 +195,7 @@ export default function Sorteador() {
 
   function importarMensalistas() {
     importar(
-      mensalistas.map((m) => ({ nome: m.nome, nota: 5, goleiro: false })),
+      mensalistas.map((m) => ({ nome: m.nome, nota: 50, goleiro: false })),
       "dos mensalistas",
     );
   }
@@ -213,11 +269,6 @@ export default function Sorteador() {
         : "Times sorteados!",
     );
   }
-
-  const notasSugeridas = [
-    "1", "1.5", "2", "2.5", "3", "3.5", "4", "4.5", "5",
-    "5.5", "6", "6.5", "7", "7.5", "8", "8.5", "9", "9.5", "10",
-  ];
 
   if (!q.data) return <Estado q={q} linhas={6} />;
 
@@ -470,43 +521,67 @@ export default function Sorteador() {
         {/* ─────────────── ABA JOGADORES ─────────────── */}
         <TabsContent value="jogadores" className="mt-6 space-y-6">
           {/* Formulário */}
-          <div className="rounded-2xl border border-border/70 bg-card/80 p-5">
-            <p className="mb-4 text-sm font-medium text-foreground">
-              {editandoId ? "Editar jogador" : "Cadastrar jogador"}
-            </p>
-            <div className="flex flex-wrap items-end gap-4">
-              <div className="flex-1 min-w-[180px]">
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              salvarJogador();
+            }}
+            className="rounded-2xl border border-border/70 bg-card/80 p-5"
+          >
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <p className="text-sm font-medium text-foreground">
+                {editandoId ? "Editar jogador" : "Cadastrar jogador"}
+              </p>
+              <div role="radiogroup" aria-label="Como dar a nota" className="inline-flex rounded-lg bg-muted p-1 text-sm">
+                {(
+                  [
+                    ["atributos", "Por atributos"],
+                    ["geral", "Nota geral direta"],
+                  ] as const
+                ).map(([valor, rotulo]) => (
+                  <button
+                    key={valor}
+                    type="button"
+                    role="radio"
+                    aria-checked={modo === valor}
+                    onClick={() => setModo(valor)}
+                    className={`rounded-md px-3 py-1.5 transition-colors ${
+                      modo === valor ? "bg-background text-foreground shadow" : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    {rotulo}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="mt-4 flex flex-wrap items-end gap-4">
+              <div className="min-w-[200px] flex-1">
                 <Label htmlFor="nome">Nome</Label>
                 <Input
                   id="nome"
                   value={nome}
                   onChange={(e) => setNome(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && salvarJogador()}
                   placeholder="Nome do jogador"
                   className="mt-1"
                 />
               </div>
-              <div className="w-28">
-                <Label htmlFor="nota">Nota (1-10)</Label>
-                <Input
-                  id="nota"
-                  type="number"
-                  min={1}
-                  max={10}
-                  step={0.5}
-                  list="notas-sugeridas"
-                  value={nota}
-                  onChange={(e) => setNota(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && salvarJogador()}
-                  placeholder="5"
-                  className="mt-1"
-                />
-                <datalist id="notas-sugeridas">
-                  {notasSugeridas.map((n) => (
-                    <option key={n} value={n} />
-                  ))}
-                </datalist>
-              </div>
+              {modo === "geral" && (
+                <div className="w-28">
+                  <Label htmlFor="nota">Nota geral</Label>
+                  <Input
+                    id="nota"
+                    type="number"
+                    inputMode="numeric"
+                    min={1}
+                    max={99}
+                    value={nota}
+                    onChange={(e) => setNota(e.target.value)}
+                    placeholder="1–99"
+                    className="font-mono-num mt-1"
+                  />
+                </div>
+              )}
               <label className="flex cursor-pointer items-center gap-2 pb-2.5 text-sm text-foreground">
                 <input
                   type="checkbox"
@@ -516,109 +591,114 @@ export default function Sorteador() {
                 />
                 <Hand className="h-4 w-4 text-primary" /> Goleiro
               </label>
-              <Button onClick={salvarJogador} className="gap-2">
+            </div>
+
+            {modo === "atributos" && (
+              <div className="mt-4 grid grid-cols-3 gap-3 sm:grid-cols-6">
+                {ATRIBUTOS.map((a) => (
+                  <div key={a.campo}>
+                    <Label htmlFor={a.campo} className="flex items-baseline justify-between gap-1">
+                      <span className="font-display text-lg tracking-wide text-primary">{a.sigla}</span>
+                      <span className="truncate text-[11px] text-muted-foreground">{a.nome}</span>
+                    </Label>
+                    <Input
+                      id={a.campo}
+                      type="number"
+                      inputMode="numeric"
+                      min={1}
+                      max={99}
+                      value={atributos[a.campo]}
+                      onChange={(e) => setAtributos((v) => ({ ...v, [a.campo]: e.target.value }))}
+                      placeholder="1–99"
+                      className="font-mono-num mt-1"
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="mt-5 flex flex-wrap items-center gap-3 border-t border-border/70 pt-4">
+              <p className="mr-auto flex items-baseline gap-2 text-sm text-muted-foreground">
+                Nota geral
+                <span className="font-display text-4xl leading-none text-foreground">{notaPrevia ?? "—"}</span>
+                {modo === "atributos" && <span>média dos 6 atributos</span>}
+              </p>
+              {editandoId && (
+                <Button type="button" variant="ghost" onClick={limparForm}>
+                  <X /> Cancelar
+                </Button>
+              )}
+              <Button type="submit">
                 {editandoId ? (
                   <>
-                    <Check className="h-4 w-4" /> Salvar
+                    <Check /> Salvar
                   </>
                 ) : (
                   <>
-                    <Plus className="h-4 w-4" /> Adicionar
+                    <Plus /> Adicionar
                   </>
                 )}
               </Button>
-              {editandoId && (
-                <Button variant="ghost" onClick={limparForm} className="gap-2">
-                  <X className="h-4 w-4" /> Cancelar
+            </div>
+          </form>
+
+          {/* Cartas */}
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="text-sm font-medium text-foreground">Elenco ({jogadores.length})</p>
+            <div className="flex flex-wrap justify-end gap-2">
+              {legados.length > 0 && (
+                <Button variant="outline" size="sm" onClick={importarDoNavegador}>
+                  <Download /> Importar do navegador ({legados.length})
                 </Button>
               )}
+              <Button variant="outline" size="sm" onClick={importarMensalistas}>
+                <Download /> Importar mensalistas
+              </Button>
             </div>
           </div>
 
-          {/* Lista */}
-          <div className="rounded-2xl border border-border/70 bg-card/80">
-            <div className="flex items-center justify-between border-b border-border px-4 py-3">
-              <p className="text-sm font-medium text-foreground">
-                Jogadores cadastrados ({jogadores.length})
-              </p>
-              <div className="flex flex-wrap justify-end gap-2">
-                {legados.length > 0 && (
-                  <Button variant="outline" size="sm" onClick={importarDoNavegador}>
-                    <Download /> Importar do navegador ({legados.length})
-                  </Button>
-                )}
-                <Button variant="outline" size="sm" onClick={importarMensalistas}>
-                  <Download /> Importar mensalistas
-                </Button>
-              </div>
-            </div>
-
-            {jogadores.length === 0 ? (
-              <p className="px-4 py-8 text-center text-sm text-muted-foreground">
-                Nenhum jogador cadastrado. Adicione acima ou importe os
-                mensalistas.
-              </p>
-            ) : (
-              <table className="w-full text-left text-sm">
-                <thead>
-                  <tr className="border-b border-border bg-muted/50">
-                    <th className="px-4 py-2.5 font-medium text-muted-foreground">
-                      Nome
-                    </th>
-                    <th className="px-4 py-2.5 font-medium text-muted-foreground">
-                      Nota
-                    </th>
-                    <th className="px-4 py-2.5 font-medium text-muted-foreground">
-                      Posição
-                    </th>
-                    <th className="px-4 py-2.5" />
-                  </tr>
-                </thead>
-                <tbody>
-                  {[...jogadores]
-                    .sort((a, b) => b.nota - a.nota)
-                    .map((j) => (
-                      <tr
-                        key={j.id}
-                        className="border-b border-border last:border-0"
+          {jogadores.length === 0 ? (
+            <p className="rounded-2xl border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
+              Nenhum jogador cadastrado. Adicione acima ou importe os mensalistas.
+            </p>
+          ) : (
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(11.5rem,1fr))] gap-4">
+              {[...jogadores]
+                .sort((a, b) => b.nota - a.nota)
+                .map((j) => (
+                  <CartaJogador key={j.id} jogador={j}>
+                    <div className="mt-3 flex justify-center gap-1">
+                      <label
+                        aria-label={`Trocar foto de ${j.nome}`}
+                        className="cursor-pointer rounded-lg p-2 transition-colors hover:bg-black/10"
                       >
-                        <td className="px-4 py-2.5 text-foreground">{j.nome}</td>
-                        <td className="px-4 py-2.5">
-                          <Badge variant="secondary">{j.nota}</Badge>
-                        </td>
-                        <td className="px-4 py-2.5 text-muted-foreground">
-                          {j.goleiro ? (
-                            <span className="inline-flex items-center gap-1.5 text-primary">
-                              <Hand className="h-4 w-4" /> Goleiro
-                            </span>
-                          ) : (
-                            "Linha"
-                          )}
-                        </td>
-                        <td className="px-4 py-2.5">
-                          <div className="flex justify-end gap-1">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => editar(j)}
-                            >
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => remover(j)}
-                            >
-                              <Trash2 className="h-4 w-4 text-destructive" />
-                            </Button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                </tbody>
-              </table>
-            )}
-          </div>
+                        <Camera className="h-4 w-4" />
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="sr-only"
+                          onChange={(e) => trocarFoto(j, e.target.files?.[0])}
+                        />
+                      </label>
+                      <button
+                        aria-label={`Editar ${j.nome}`}
+                        onClick={() => editar(j)}
+                        className="rounded-lg p-2 transition-colors hover:bg-black/10"
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </button>
+                      <button
+                        aria-label={`Remover ${j.nome}`}
+                        onClick={() => remover(j)}
+                        className="rounded-lg p-2 transition-colors hover:bg-black/10"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </CartaJogador>
+                ))}
+            </div>
+          )}
         </TabsContent>
       </Tabs>
     </div>

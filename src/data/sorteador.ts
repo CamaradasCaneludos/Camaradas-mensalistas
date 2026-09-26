@@ -1,8 +1,27 @@
-export interface Jogador {
+/** Atributos da carta, na ordem em que aparecem (duas colunas de três). */
+export const ATRIBUTOS = [
+  { campo: "ritmo", sigla: "RIT", nome: "Ritmo" },
+  { campo: "finalizacao", sigla: "FIN", nome: "Finalização" },
+  { campo: "passe", sigla: "PAS", nome: "Passe" },
+  { campo: "drible", sigla: "DRI", nome: "Drible" },
+  { campo: "defesa", sigla: "DEF", nome: "Defesa" },
+  { campo: "fisico", sigla: "FIS", nome: "Físico" },
+] as const;
+
+export type Atributo = (typeof ATRIBUTOS)[number]["campo"];
+
+export type Jogador = {
   id: string;
   nome: string;
-  nota: number; // escala de 1 a 10 (aceita meio ponto)
+  nota: number; // nota geral, de 1 a 99
   goleiro: boolean;
+  foto_url?: string | null;
+} & Partial<Record<Atributo, number | null>>;
+
+/** Nota geral = média simples dos atributos, arredondada. */
+export function notaGeral(atributos: Record<Atributo, number>): number {
+  const valores = ATRIBUTOS.map((a) => atributos[a.campo]);
+  return Math.round(valores.reduce((acc, v) => acc + v, 0) / valores.length);
 }
 
 export interface Time {

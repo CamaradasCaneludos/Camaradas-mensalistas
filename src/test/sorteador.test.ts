@@ -5,6 +5,7 @@ import {
   capacidadesTimes,
   maxTimes,
   sortearTimes,
+  notaGeral,
 } from "@/data/sorteador";
 
 function criarJogadores(qtd: number, goleiro = false): Jogador[] {
@@ -69,5 +70,14 @@ describe("sortearTimes", () => {
     const { times, reservas } = sortearTimes(jogadores, 3);
     const ids = [...times.flatMap((t) => t.jogadores), ...reservas].map((j) => j.id);
     expect(new Set(ids).size).toBe(13);
+  });
+});
+
+describe("notaGeral", () => {
+  it("é a média arredondada dos seis atributos", () => {
+    expect(
+      notaGeral({ ritmo: 90, finalizacao: 93, passe: 82, drible: 89, defesa: 35, fisico: 78 }),
+    ).toBe(78);
+    expect(notaGeral({ ritmo: 50, finalizacao: 50, passe: 50, drible: 50, defesa: 50, fisico: 51 })).toBe(50);
   });
 });

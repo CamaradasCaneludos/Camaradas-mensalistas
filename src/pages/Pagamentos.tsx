@@ -3,6 +3,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CampoConfig, ListaTextos, PageHeader, painel, reais } from "@/components/Editaveis";
+import { ListaMensalistas } from "@/components/ListaMensalistas";
 import { enviarFoto, supabase, useConfig, useMutar, useSession } from "@/lib/supabase";
 
 export default function Pagamentos() {
@@ -70,6 +71,11 @@ export default function Pagamentos() {
           </section>
         </div>
       </div>
+
+      <section className="rise mt-12 max-w-3xl">
+        <h2 className="mb-4 text-3xl">Quem já pagou</h2>
+        <ListaMensalistas />
+      </section>
     </>
   );
 }
