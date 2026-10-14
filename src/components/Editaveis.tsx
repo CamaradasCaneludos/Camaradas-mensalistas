@@ -201,8 +201,8 @@ export const reais = (v: string | number) =>
 
 /** Foto quadrada com iniciais de reserva. */
 export function Retrato({ nome, foto, className = "" }: { nome: string; foto: string | null; className?: string }) {
-  const iniciais = nome
-    .split(" ")
+  // primeira letra das duas primeiras palavras, ignorando parênteses e afins
+  const iniciais = (nome.match(/\p{L}+/gu) ?? [])
     .map((n) => n[0])
     .slice(0, 2)
     .join("")

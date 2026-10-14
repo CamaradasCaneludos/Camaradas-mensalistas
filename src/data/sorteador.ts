@@ -150,6 +150,98 @@ export function sortearTimes(
   return { times, reservas };
 }
 
+/* ── Sorteio por atributos ── */
+
+/** Os 6 atributos do jogador; quem tem só a nota geral conta ela nos seis. */
+export function vetorAtributos(j: Jogador): number[] {
+  return j.atributos ?? Array(6).fill(j.nota);
+}
+
+/** Média de cada atributo no time. Goleiro fica de fora: os atributos dele são outros. */
+export function mediasAtributos(jogadores: Jogador[]): number[] {
+  const linha = jogadores.filter((j) => !j.goleiro);
+  return Array.from({ length: 6 }, (_, d) =>
+    linha.length ? linha.reduce((acc, j) => acc + vetorAtributos(j)[d], 0) / linha.length : 0,
+  );
+}
+
+/** Em cada atributo, soma o quanto a média de cada time se afasta da média entre os times. */
+function desequilibrio(grupos: Jogador[][]): number {
+  const medias = grupos.map(mediasAtributos);
+  let total = 0;
+  for (let d = 0; d < 6; d++) {
+    const geral = medias.reduce((acc, m) => acc + m[d], 0) / medias.length;
+    for (const m of medias) total += (m[d] - geral) ** 2;
+  }
+  return total;
+}
+
+/**
+ * Mesmas regras de vagas e reservas do `sortearTimes`, mas equilibra os 6 atributos ao
+ * mesmo tempo: cada time fica com média parecida em ritmo, finalização, passe etc.
+ *
+ * Estratégia: parte de várias distribuições aleatórias e, em cada uma, troca pares de
+ * jogadores entre times enquanto a troca diminuir o desequilíbrio. Fica com a melhor.
+ * Partir do aleatório faz cada sorteio dar times diferentes.
+ * ponytail: busca local, não garante o ótimo; mais `tentativas` chega mais perto.
+ */
+export function sortearPorAtributos(
+  jogadoresLinha: Jogador[],
+  numTimes: number,
+  timesBase?: Time[],
+  tentativas = 60,
+): ResultadoSorteio {
+  const capacidades = capacidadesTimes(jogadoresLinha.length, numTimes);
+  const totalVagas = capacidades.reduce((acc, c) => acc + c, 0);
+  const sorteados = embaralhar(jogadoresLinha);
+  const reservas = sorteados.slice(totalVagas);
+  const emCampo = sorteados.slice(0, totalVagas);
+
+  let melhor: Jogador[][] = capacidades.map(() => []);
+  let melhorCusto = Infinity;
+
+  for (let t = 0; t < tentativas; t++) {
+    const ordem = embaralhar(emCampo);
+    let inicio = 0;
+    const grupos = capacidades.map((c) => ordem.slice(inicio, (inicio += c)));
+
+    let custo = desequilibrio(grupos);
+    let melhorou = true;
+    while (melhorou) {
+      melhorou = false;
+      for (let a = 0; a < grupos.length; a++)
+        for (let b = a + 1; b < grupos.length; b++)
+          for (let i = 0; i < grupos[a].length; i++)
+            for (let j = 0; j < grupos[b].length; j++) {
+              [grupos[a][i], grupos[b][j]] = [grupos[b][j], grupos[a][i]];
+              const novo = desequilibrio(grupos);
+              if (novo < custo - 1e-9) {
+                custo = novo;
+                melhorou = true;
+              } else {
+                [grupos[a][i], grupos[b][j]] = [grupos[b][j], grupos[a][i]];
+              }
+            }
+    }
+
+    if (custo < melhorCusto) {
+      melhorCusto = custo;
+      melhor = grupos;
+    }
+  }
+
+  const base =
+    timesBase && timesBase.length === numTimes
+      ? timesBase
+      : capacidades.map(() => ({ jogadores: [], produto: 1 }));
+  const times = base.map((time, i) => {
+    const jogadores = [...time.jogadores, ...melhor[i]];
+    return { jogadores, produto: jogadores.reduce((acc, j) => acc * j.nota, 1) };
+  });
+
+  return { times, reservas };
+}
+
 /** Média geométrica das notas do time — a "nota média" coerente com o produto. */
 export function mediaTime(time: Time): number {
   if (time.jogadores.length === 0) return 0;

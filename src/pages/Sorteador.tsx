@@ -3,11 +3,14 @@ import {
   Jogador,
   Time,
   sortearTimes,
+  sortearPorAtributos,
+  mediasAtributos,
   mediaTime,
   maxTimes,
   capacidadesTimes,
   notaGeral,
   atributosDe,
+  ATRIBUTOS_LINHA,
   TAMANHO_TIME,
 } from "@/data/sorteador";
 import { enviarFoto, supabase, useMutar, useRows, type Mensalista } from "@/lib/supabase";
@@ -18,7 +21,6 @@ import {
   Plus,
   Trash2,
   Pencil,
-  Star,
   Hand,
   Users,
   Check,
@@ -60,11 +62,40 @@ function lerNota(valor: string, min: number): number | null {
   return n;
 }
 
-/** O produto cresce rápido — acima de 1 milhão mostra em notação científica. */
-function formatarProduto(valor: number): string {
-  if (valor >= 1e6) return valor.toExponential(2).replace("e+", " × 10^");
-  return valor.toLocaleString("pt-BR", { maximumFractionDigits: 1 });
+/** Botões lado a lado para escolher uma opção. */
+function Opcoes<T extends string>({
+  rotulo,
+  valor,
+  opcoes,
+  onChange,
+}: {
+  rotulo: string;
+  valor: T;
+  opcoes: readonly (readonly [NoInfer<T>, string])[];
+  onChange: (v: NoInfer<T>) => void;
+}) {
+  return (
+    <div role="radiogroup" aria-label={rotulo} className="inline-flex rounded-lg bg-muted p-1 text-sm">
+      {opcoes.map(([v, texto]) => (
+        <button
+          key={v}
+          type="button"
+          role="radio"
+          aria-checked={valor === v}
+          onClick={() => onChange(v)}
+          className={`rounded-md px-3 py-1.5 transition-colors ${
+            valor === v ? "bg-background text-foreground shadow" : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          {texto}
+        </button>
+      ))}
+    </div>
+  );
 }
+
+/** Goleiro primeiro, depois por nota. */
+const ordemNoTime = (a: Jogador, b: Jogador) => Number(b.goleiro) - Number(a.goleiro) || b.nota - a.nota;
 
 /** Quantos jogadores de linha o time já tem (goleiro não ocupa vaga). */
 function jogadoresDeLinha(time: Time): number {
@@ -94,6 +125,8 @@ export default function Sorteador() {
   // sorteio — todo mundo começa presente
   const [ausentes, setAusentes] = useState<Record<string, boolean>>({});
   const [numTimes, setNumTimes] = useState(2);
+  // "atributos": cada time com médias parecidas nos 6 atributos; "nota": pelo produto da nota geral
+  const [criterio, setCriterio] = useState<"atributos" | "nota">("atributos");
   const [goleiroPorTime, setGoleiroPorTime] = useState<Record<string, number>>({});
   const [resultado, setResultado] = useState<Time[] | null>(null);
   const [reservas, setReservas] = useState<Jogador[]>([]);
@@ -247,7 +280,10 @@ export default function Sorteador() {
       }
     }
 
-    const sorteio = sortearTimes(linha, numTimes, timesBase);
+    const sorteio =
+      criterio === "atributos"
+        ? sortearPorAtributos(linha, numTimes, timesBase)
+        : sortearTimes(linha, numTimes, timesBase);
     setResultado(sorteio.times);
     setReservas(sorteio.reservas);
     toast.success(
@@ -262,7 +298,7 @@ export default function Sorteador() {
   return (
     <div className="space-y-6">
       <PageHeader kicker="Só para quem está logado" titulo="Sorteador de times">
-        Marque quem veio e gere times equilibrados pelo produto das notas.
+        Marque quem veio e gere times equilibrados pelos atributos ou pela nota geral.
       </PageHeader>
 
       <Tabs defaultValue="sortear" className="w-full">
@@ -330,6 +366,24 @@ export default function Sorteador() {
                     <Shuffle className="h-4 w-4" />
                     {resultado ? "Sortear novamente" : "Sortear times"}
                   </Button>
+                </div>
+
+                <div className="mt-5 flex flex-wrap items-center gap-3 border-t border-border pt-4">
+                  <p className="text-sm font-medium text-foreground">Equilibrar por</p>
+                  <Opcoes
+                    rotulo="Critério do sorteio"
+                    valor={criterio}
+                    onChange={setCriterio}
+                    opcoes={[
+                      ["atributos", "Atributos"],
+                      ["nota", "Nota geral"],
+                    ]}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    {criterio === "atributos"
+                      ? "Cada time fica com média parecida em ritmo, finalização, passe, drible, defesa e físico."
+                      : "Times equilibrados pelo produto das notas gerais."}
+                  </p>
                 </div>
 
                 {/* Goleiros fixos por time */}
@@ -430,76 +484,53 @@ export default function Sorteador() {
               </div>
 
               {/* Resultado */}
-              {resultado && (
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-                  {resultado.map((time, i) => (
-                    <div
-                      key={i}
-                      className="rounded-2xl border border-border/70 bg-card/80"
-                    >
-                      <div className="flex items-center justify-between border-b border-border px-4 py-3">
-                        <div className="flex items-center gap-2">
-                          <h3 className="font-display text-xl tracking-wide text-primary">
-                            TIME {i + 1}
-                          </h3>
-                          <Badge
-                            variant={
-                              vagasLivres(time) > 0 ? "outline" : "secondary"
-                            }
-                          >
-                            {vagasLivres(time) > 0
-                              ? `${jogadoresDeLinha(time)}/${TAMANHO_TIME} — falta ${vagasLivres(time)}`
-                              : `${TAMANHO_TIME}/${TAMANHO_TIME}`}
-                          </Badge>
-                        </div>
-                        <div className="text-right text-xs text-muted-foreground">
-                          <p>
-                            Média{" "}
-                            <span className="font-semibold text-foreground">
-                              {mediaTime(time).toFixed(2)}
-                            </span>
-                          </p>
-                          <p>Produto {formatarProduto(time.produto)}</p>
-                        </div>
+              {resultado &&
+                resultado.map((time, i) => (
+                  <section key={i} className="rise rounded-2xl border border-border/70 bg-card/80 p-4 sm:p-5">
+                    <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
+                      <div className="flex items-center gap-3">
+                        <h3 className="text-4xl text-primary">Time {i + 1}</h3>
+                        <Badge variant={vagasLivres(time) > 0 ? "outline" : "secondary"}>
+                          {vagasLivres(time) > 0
+                            ? `${jogadoresDeLinha(time)}/${TAMANHO_TIME} — falta ${vagasLivres(time)}`
+                            : `${TAMANHO_TIME}/${TAMANHO_TIME}`}
+                        </Badge>
                       </div>
-                      <ul className="divide-y divide-border">
-                        {time.jogadores.map((j) => (
-                          <li
-                            key={j.id}
-                            className="flex items-center gap-2 px-4 py-2.5 text-sm"
+                      <dl className="flex flex-wrap gap-1.5 text-sm">
+                        <div className="flex items-baseline gap-1.5 rounded-lg bg-primary/15 px-2.5 py-1">
+                          <dt className="text-xs text-muted-foreground">Média</dt>
+                          <dd className="font-mono-num text-foreground">{numero(Number(mediaTime(time).toFixed(1)))}</dd>
+                        </div>
+                        {mediasAtributos(time.jogadores).map((m, d) => (
+                          <div
+                            key={d}
+                            title={ATRIBUTOS_LINHA[d].nome}
+                            className="flex items-baseline gap-1.5 rounded-lg bg-muted px-2.5 py-1"
                           >
-                            {j.goleiro ? (
-                              <Hand className="h-4 w-4 text-primary" />
-                            ) : (
-                              <Star className="h-4 w-4 text-muted-foreground" />
-                            )}
-                            <span className="flex-1 text-foreground">
-                              {j.nome}
-                            </span>
-                            <Badge variant="secondary">{numero(j.nota)}</Badge>
-                          </li>
+                            <dt className="font-display tracking-wide text-muted-foreground">{ATRIBUTOS_LINHA[d].sigla}</dt>
+                            <dd className="font-mono-num text-foreground">{numero(Number(m.toFixed(1)))}</dd>
+                          </div>
                         ))}
-                      </ul>
+                      </dl>
                     </div>
-                  ))}
-                </div>
-              )}
+                    <div className="mt-5 grid grid-cols-[repeat(auto-fill,minmax(9.5rem,1fr))] gap-4">
+                      {[...time.jogadores].sort(ordemNoTime).map((j) => (
+                        <CartaJogador key={j.id} jogador={j} />
+                      ))}
+                    </div>
+                  </section>
+                ))}
 
               {/* Fora dos times */}
               {resultado && reservas.length > 0 && (
-                <div className="rounded-2xl border border-border/70 bg-card/80 p-5">
-                  <p className="mb-3 text-sm font-medium text-foreground">
-                    Fora dos times ({reservas.length})
-                  </p>
-                  <div className="flex flex-wrap gap-2">
+                <section className="rounded-2xl border border-dashed border-border p-5">
+                  <p className="text-sm font-medium text-foreground">Fora dos times ({reservas.length})</p>
+                  <div className="mt-4 grid grid-cols-[repeat(auto-fill,minmax(9.5rem,1fr))] gap-4 opacity-70">
                     {reservas.map((j) => (
-                      <Badge key={j.id} variant="outline" className="gap-1.5">
-                        {j.nome}
-                        <span className="text-muted-foreground">{numero(j.nota)}</span>
-                      </Badge>
+                      <CartaJogador key={j.id} jogador={j} />
                     ))}
                   </div>
-                </div>
+                </section>
               )}
             </>
           )}
@@ -519,27 +550,15 @@ export default function Sorteador() {
               <p className="text-sm font-medium text-foreground">
                 {editandoId ? "Editar jogador" : "Cadastrar jogador"}
               </p>
-              <div role="radiogroup" aria-label="Como dar a nota" className="inline-flex rounded-lg bg-muted p-1 text-sm">
-                {(
-                  [
-                    ["atributos", "Por atributos"],
-                    ["geral", "Nota geral direta"],
-                  ] as const
-                ).map(([valor, rotulo]) => (
-                  <button
-                    key={valor}
-                    type="button"
-                    role="radio"
-                    aria-checked={modo === valor}
-                    onClick={() => setModo(valor)}
-                    className={`rounded-md px-3 py-1.5 transition-colors ${
-                      modo === valor ? "bg-background text-foreground shadow" : "text-muted-foreground hover:text-foreground"
-                    }`}
-                  >
-                    {rotulo}
-                  </button>
-                ))}
-              </div>
+              <Opcoes
+                rotulo="Como dar a nota"
+                valor={modo}
+                onChange={setModo}
+                opcoes={[
+                  ["atributos", "Por atributos"],
+                  ["geral", "Nota geral direta"],
+                ]}
+              />
             </div>
 
             <div className="mt-4 flex flex-wrap items-end gap-4">
@@ -643,7 +662,7 @@ export default function Sorteador() {
               Nenhum jogador cadastrado. Adicione acima ou importe os mensalistas.
             </p>
           ) : (
-            <div className="grid grid-cols-[repeat(auto-fill,minmax(11.5rem,1fr))] gap-4">
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(9.5rem,1fr))] gap-4">
               {[...jogadores]
                 .sort((a, b) => b.nota - a.nota)
                 .map((j) => (

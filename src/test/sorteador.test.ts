@@ -6,6 +6,8 @@ import {
   maxTimes,
   sortearTimes,
   notaGeral,
+  sortearPorAtributos,
+  mediasAtributos,
 } from "@/data/sorteador";
 
 function criarJogadores(qtd: number, goleiro = false): Jogador[] {
@@ -81,5 +83,43 @@ describe("notaGeral", () => {
 
   it("nunca fica abaixo de 1 para não zerar o produto do time", () => {
     expect(notaGeral([0, 0, 0, 0, 0, 0])).toBe(1);
+  });
+});
+
+describe("sortearPorAtributos", () => {
+  const especialista = (id: string, atributos: number[]): Jogador => ({
+    id,
+    nome: id,
+    nota: notaGeral(atributos),
+    goleiro: false,
+    atributos,
+  });
+
+  it("mistura os especialistas para cada time ter atributos parecidos", () => {
+    const atacantes = [1, 2, 3, 4].map((i) => especialista(`a${i}`, [9, 9, 9, 2, 2, 2]));
+    const defensores = [1, 2, 3, 4].map((i) => especialista(`d${i}`, [2, 2, 2, 9, 9, 9]));
+    const medianos = [1, 2].map((i) => especialista(`m${i}`, [5.5, 5.5, 5.5, 5.5, 5.5, 5.5]));
+
+    const { times } = sortearPorAtributos([...atacantes, ...defensores, ...medianos], 2);
+    const [m1, m2] = times.map((t) => mediasAtributos(t.jogadores));
+    m1.forEach((v, d) => expect(Math.abs(v - m2[d])).toBeLessThan(0.01));
+  });
+
+  it("respeita as vagas e não perde ninguém", () => {
+    const jogadores = criarJogadores(13);
+    const { times, reservas } = sortearPorAtributos(jogadores, 3);
+    expect(times.map((t) => naLinha(t.jogadores))).toEqual([5, 5, 3]);
+    const ids = [...times.flatMap((t) => t.jogadores), ...reservas].map((j) => j.id);
+    expect(new Set(ids).size).toBe(13);
+  });
+
+  it("goleiro fixo continua no time e fica fora das médias", () => {
+    const goleiro: Jogador = { ...criarJogadores(1, true)[0], atributos: [10, 10, 10, 10, 10, 10] };
+    const { times } = sortearPorAtributos(criarJogadores(10), 2, [
+      { jogadores: [goleiro], produto: goleiro.nota },
+      { jogadores: [], produto: 1 },
+    ]);
+    expect(times[0].jogadores).toContain(goleiro);
+    expect(times.map((t) => naLinha(t.jogadores))).toEqual([5, 5]);
   });
 });
