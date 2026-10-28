@@ -4,6 +4,9 @@ import {
   Time,
   sortearTimes,
   sortearPorAtributos,
+  trocarJogadores,
+  moverJogador,
+  comoTime,
   mediasAtributos,
   mediaTime,
   maxTimes,
@@ -27,6 +30,7 @@ import {
   X,
   Download,
   Camera,
+  ArrowDownToLine,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -130,6 +134,7 @@ export default function Sorteador() {
   const [goleiroPorTime, setGoleiroPorTime] = useState<Record<string, number>>({});
   const [resultado, setResultado] = useState<Time[] | null>(null);
   const [reservas, setReservas] = useState<Jogador[]>([]);
+  const [selecionado, setSelecionado] = useState<string | null>(null);
 
   /* ── cadastro ── */
   function limparForm() {
@@ -280,16 +285,66 @@ export default function Sorteador() {
       }
     }
 
+    // o sorteio atual entra como "anterior" para o rodízio não repetir as mesmas duplas
+    const anterior = resultado ?? undefined;
     const sorteio =
       criterio === "atributos"
-        ? sortearPorAtributos(linha, numTimes, timesBase)
-        : sortearTimes(linha, numTimes, timesBase);
+        ? sortearPorAtributos(linha, numTimes, timesBase, anterior)
+        : sortearTimes(linha, numTimes, timesBase, anterior);
     setResultado(sorteio.times);
     setReservas(sorteio.reservas);
+    setSelecionado(null);
     toast.success(
       sorteio.reservas.length > 0
-        ? `Times sorteados! ${sorteio.reservas.length} jogador(es) ficaram de fora.`
-        : "Times sorteados!",
+        ? `Times sorteados. ${sorteio.reservas.length} jogador(es) ficaram de fora.`
+        : "Times sorteados.",
+    );
+  }
+
+  /* ── ajuste manual: toca num jogador e depois em outro para trocar ── */
+  function aplicarGrupos(grupos: Jogador[][]) {
+    setResultado(grupos.slice(0, -1).map(comoTime));
+    setReservas(grupos[grupos.length - 1]);
+    setSelecionado(null);
+  }
+
+  const grupos = resultado ? [...resultado.map((t) => t.jogadores), reservas] : [];
+
+  function tocarCarta(id: string) {
+    if (!selecionado) return setSelecionado(id);
+    if (selecionado === id) return setSelecionado(null);
+    const naoMudou = trocarJogadores(grupos, selecionado, id) === grupos;
+    // mesmo time: só troca a seleção
+    if (naoMudou) return setSelecionado(id);
+    aplicarGrupos(trocarJogadores(grupos, selecionado, id));
+  }
+
+  const grupoDoSelecionado = grupos.findIndex((g) => g.some((j) => j.id === selecionado));
+
+  function botaoMover(destino: number) {
+    if (!selecionado || grupoDoSelecionado === destino) return null;
+    return (
+      <Button variant="outline" size="sm" onClick={() => aplicarGrupos(moverJogador(grupos, selecionado, destino))}>
+        <ArrowDownToLine /> Mover para cá
+      </Button>
+    );
+  }
+
+  function cartaClicavel(j: Jogador) {
+    const ativo = selecionado === j.id;
+    return (
+      <button
+        key={j.id}
+        type="button"
+        onClick={() => tocarCarta(j.id)}
+        aria-pressed={ativo}
+        aria-label={`${j.nome}${ativo ? " (selecionado)" : ""}`}
+        className={`rounded-b-[2.4rem] rounded-t-[1.15rem] text-left transition-transform duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-[0.97] ${
+          ativo ? "-translate-y-1 ring-4 ring-primary" : selecionado ? "opacity-90 hover:opacity-100" : ""
+        }`}
+      >
+        <CartaJogador jogador={j} />
+      </button>
     );
   }
 
@@ -484,17 +539,25 @@ export default function Sorteador() {
               </div>
 
               {/* Resultado */}
+              {resultado && (
+                <p className="rounded-xl bg-muted/60 px-4 py-3 text-sm text-muted-foreground" aria-live="polite">
+                  {selecionado
+                    ? `${grupos.flat().find((j) => j.id === selecionado)?.nome} selecionado. Toque em outro jogador para trocar os dois de lugar, ou em "Mover para cá" num time.`
+                    : "Quer ajustar? Toque em um jogador e depois em outro para trocar os dois de time."}
+                </p>
+              )}
               {resultado &&
                 resultado.map((time, i) => (
                   <section key={i} className="rise rounded-2xl border border-border/70 bg-card/80 p-4 sm:p-5">
                     <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
                       <div className="flex items-center gap-3">
                         <h3 className="text-4xl text-primary">Time {i + 1}</h3>
-                        <Badge variant={vagasLivres(time) > 0 ? "outline" : "secondary"}>
-                          {vagasLivres(time) > 0
-                            ? `${jogadoresDeLinha(time)}/${TAMANHO_TIME} — falta ${vagasLivres(time)}`
-                            : `${TAMANHO_TIME}/${TAMANHO_TIME}`}
+                        <Badge variant={vagasLivres(time) === 0 ? "secondary" : "outline"}>
+                          {jogadoresDeLinha(time)}/{TAMANHO_TIME}
+                          {vagasLivres(time) > 0 && ` — falta ${vagasLivres(time)}`}
+                          {vagasLivres(time) < 0 && ` — ${-vagasLivres(time)} a mais`}
                         </Badge>
+                        {botaoMover(i)}
                       </div>
                       <dl className="flex flex-wrap gap-1.5 text-sm">
                         <div className="flex items-baseline gap-1.5 rounded-lg bg-primary/15 px-2.5 py-1">
@@ -514,22 +577,23 @@ export default function Sorteador() {
                       </dl>
                     </div>
                     <div className="mt-5 grid grid-cols-[repeat(auto-fill,minmax(9.5rem,1fr))] gap-4">
-                      {[...time.jogadores].sort(ordemNoTime).map((j) => (
-                        <CartaJogador key={j.id} jogador={j} />
-                      ))}
+                      {[...time.jogadores].sort(ordemNoTime).map(cartaClicavel)}
                     </div>
                   </section>
                 ))}
 
               {/* Fora dos times */}
-              {resultado && reservas.length > 0 && (
-                <section className="rounded-2xl border border-dashed border-border p-5">
-                  <p className="text-sm font-medium text-foreground">Fora dos times ({reservas.length})</p>
-                  <div className="mt-4 grid grid-cols-[repeat(auto-fill,minmax(9.5rem,1fr))] gap-4 opacity-70">
-                    {reservas.map((j) => (
-                      <CartaJogador key={j.id} jogador={j} />
-                    ))}
+              {resultado && (reservas.length > 0 || selecionado) && (
+                <section className="rounded-2xl border border-dashed border-border p-4 sm:p-5">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <p className="text-sm font-medium text-foreground">Fora dos times ({reservas.length})</p>
+                    {botaoMover(grupos.length - 1)}
                   </div>
+                  {reservas.length > 0 && (
+                    <div className="mt-4 grid grid-cols-[repeat(auto-fill,minmax(9.5rem,1fr))] gap-4">
+                      {reservas.map(cartaClicavel)}
+                    </div>
+                  )}
                 </section>
               )}
             </>

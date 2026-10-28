@@ -8,6 +8,8 @@ import {
   notaGeral,
   sortearPorAtributos,
   mediasAtributos,
+  trocarJogadores,
+  moverJogador,
 } from "@/data/sorteador";
 
 function criarJogadores(qtd: number, goleiro = false): Jogador[] {
@@ -121,5 +123,38 @@ describe("sortearPorAtributos", () => {
     ]);
     expect(times[0].jogadores).toContain(goleiro);
     expect(times.map((t) => naLinha(t.jogadores))).toEqual([5, 5]);
+  });
+});
+
+describe("rodízio", () => {
+  it("sortear de novo mistura os times em vez de repetir", () => {
+    // todo mundo igual: qualquer divisão é equilibrada, então vale só o rodízio
+    const jogadores = criarJogadores(10).map((j) => ({ ...j, nota: 6 }));
+    const primeiro = sortearTimes(jogadores, 2);
+    const segundo = sortearTimes(jogadores, 2, undefined, primeiro.times);
+
+    const time1 = new Set(primeiro.times[0].jogadores.map((j) => j.id));
+    // com 5 x 5, o mais misturado possível é 3 + 2 (ou 2 + 3) de cada time anterior
+    for (const t of segundo.times) {
+      const vieramDoTime1 = t.jogadores.filter((j) => time1.has(j.id)).length;
+      expect([2, 3]).toContain(vieramDoTime1);
+    }
+  });
+});
+
+describe("ajuste manual", () => {
+  const [a, b, c, d] = criarJogadores(4);
+
+  it("troca dois jogadores de time", () => {
+    expect(trocarJogadores([[a, b], [c, d]], a.id, d.id)).toEqual([[d, b], [c, a]]);
+  });
+
+  it("não mexe quando os dois estão no mesmo time", () => {
+    const grupos = [[a, b], [c, d]];
+    expect(trocarJogadores(grupos, a.id, b.id)).toBe(grupos);
+  });
+
+  it("move um jogador para outro time", () => {
+    expect(moverJogador([[a, b], [c], [d]], b.id, 1)).toEqual([[a], [c, b], [d]]);
   });
 });
